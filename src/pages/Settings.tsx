@@ -29,7 +29,7 @@ export default function Settings() {
   }
 
   return (
-    <div className="space-y-6 max-w-4xl animate-fade-in">
+    <div className="space-y-6 animate-fade-in max-w-full">
       <div className="flex flex-col gap-2">
         <h1 className="text-3xl font-display font-bold tracking-tight flex items-center gap-3">
           <SettingsIcon className="w-8 h-8 text-indigo-500" />
@@ -40,20 +40,20 @@ export default function Settings() {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Card className="bg-slate-900 border-slate-800">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <Card className="bg-slate-900 border-slate-800 md:col-span-2 lg:col-span-3">
           <CardHeader>
             <CardTitle>Impostos e Meta</CardTitle>
             <CardDescription>Defina sua tributação e margem desejada padrão.</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Imposto (Ex: Simples Nacional %)</Label>
               <Input
                 type="number"
                 value={settings.taxRate * 100}
                 onChange={(e) => updateSettings({ taxRate: Number(e.target.value) / 100 })}
-                className="bg-slate-950 border-slate-700"
+                className="bg-slate-950 border-slate-700 max-w-xs"
               />
             </div>
             <div className="space-y-2">
@@ -62,7 +62,7 @@ export default function Settings() {
                 type="number"
                 value={settings.targetMargin * 100}
                 onChange={(e) => updateSettings({ targetMargin: Number(e.target.value) / 100 })}
-                className="bg-slate-950 border-slate-700"
+                className="bg-slate-950 border-slate-700 max-w-xs"
               />
             </div>
           </CardContent>
@@ -72,6 +72,12 @@ export default function Settings() {
           <Card key={key} className="bg-slate-900 border-slate-800">
             <CardHeader>
               <CardTitle className="capitalize">{plat.name}</CardTitle>
+              {key.startsWith('meli') && (
+                <CardDescription className="text-xs">
+                  Taxa fixa aplica-se a produtos &lt; R$79. Custo logístico se aplica a produtos
+                  &ge; R$79.
+                </CardDescription>
+              )}
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
@@ -89,6 +95,17 @@ export default function Settings() {
                   type="number"
                   value={plat.fixedFee}
                   onChange={(e) => updatePlatform(key as PlatformId, 'fixedFee', e.target.value)}
+                  className="bg-slate-950 border-slate-700"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Custo Logístico (R$)</Label>
+                <Input
+                  type="number"
+                  value={plat.shippingCost}
+                  onChange={(e) =>
+                    updatePlatform(key as PlatformId, 'shippingCost', e.target.value)
+                  }
                   className="bg-slate-950 border-slate-700"
                 />
               </div>

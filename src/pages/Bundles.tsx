@@ -47,6 +47,7 @@ export default function Bundles() {
             settings.platforms.shopee,
             settings.taxRate,
             settings.targetMargin,
+            'shopee',
           )
 
           return (

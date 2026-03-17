@@ -80,9 +80,23 @@ const INITIAL_SETTINGS: AppSettings = {
   taxRate: 0.04, // 4% Simples Nacional
   targetMargin: 0.2, // 20%
   platforms: {
-    shopee: { name: 'Shopee', feeRate: 0.18, fixedFee: 3.0, shippingCost: 0 }, // Seller doesn't pay shipping if registered
-    amazon: { name: 'Amazon', feeRate: 0.15, fixedFee: 0, shippingCost: 5.0 }, // FBA example fee
+    shopee: { name: 'Shopee', feeRate: 0.18, fixedFee: 3.0, shippingCost: 0 },
+    amazon: { name: 'Amazon', feeRate: 0.15, fixedFee: 0, shippingCost: 5.0 },
     tiktok: { name: 'TikTok Shop', feeRate: 0.12, fixedFee: 2.0, shippingCost: 0 },
+    meli_classic: {
+      name: 'Mercado Livre Clássico',
+      feeRate: 0.11,
+      fixedFee: 6.0,
+      shippingCost: 20.0,
+    },
+    meli_premium: {
+      name: 'Mercado Livre Premium',
+      feeRate: 0.16,
+      fixedFee: 6.0,
+      shippingCost: 20.0,
+    },
+    olist: { name: 'Olist', feeRate: 0.19, fixedFee: 5.0, shippingCost: 0 },
+    tray: { name: 'Tray', feeRate: 0.02, fixedFee: 1.0, shippingCost: 0 },
   },
 }
 

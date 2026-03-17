@@ -1,4 +1,11 @@
-export type PlatformId = 'shopee' | 'amazon' | 'tiktok'
+export type PlatformId =
+  | 'shopee'
+  | 'amazon'
+  | 'tiktok'
+  | 'meli_classic'
+  | 'meli_premium'
+  | 'olist'
+  | 'tray'
 
 export interface Product {
   id: string

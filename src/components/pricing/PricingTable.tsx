@@ -40,6 +40,7 @@ export function PricingTable({ platformId }: { platformId: PlatformId }) {
           platformSettings,
           settings.taxRate,
           settings.targetMargin,
+          platformId,
         )
         updateProduct(id, { currentPrice: Number(target.toFixed(2)) })
       }
@@ -49,7 +50,7 @@ export function PricingTable({ platformId }: { platformId: PlatformId }) {
   }
 
   return (
-    <div className="space-y-4 animate-fade-in">
+    <div className="space-y-4 animate-fade-in mt-4">
       <div className="flex justify-end">
         <Button
           onClick={handleAdjustBatch}
@@ -60,7 +61,7 @@ export function PricingTable({ platformId }: { platformId: PlatformId }) {
         </Button>
       </div>
 
-      <div className="border border-slate-800 rounded-lg overflow-hidden bg-slate-900">
+      <div className="border border-slate-800 rounded-lg overflow-hidden bg-slate-900 overflow-x-auto">
         <Table>
           <TableHeader className="bg-slate-800/50">
             <TableRow className="border-slate-800">
@@ -71,15 +72,15 @@ export function PricingTable({ platformId }: { platformId: PlatformId }) {
                   className="border-slate-500 data-[state=checked]:bg-indigo-500 data-[state=checked]:border-indigo-500"
                 />
               </TableHead>
-              <TableHead>SKU / Produto</TableHead>
+              <TableHead className="min-w-[200px]">SKU / Produto</TableHead>
               <TableHead>NCM</TableHead>
               <TableHead className="text-right">Custo Base</TableHead>
               <TableHead className="text-right">Break-even (0%)</TableHead>
-              <TableHead className="text-right text-indigo-400">
+              <TableHead className="text-right text-indigo-400 whitespace-nowrap">
                 Preço Alvo ({settings.targetMargin * 100}%)
               </TableHead>
-              <TableHead className="text-right">Tiny Atual</TableHead>
-              <TableHead className="text-right">Status Margem</TableHead>
+              <TableHead className="text-right whitespace-nowrap">Tiny Atual</TableHead>
+              <TableHead className="text-right whitespace-nowrap">Status Margem</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -89,13 +90,20 @@ export function PricingTable({ platformId }: { platformId: PlatformId }) {
                 platformSettings,
                 settings.taxRate,
                 settings.targetMargin,
+                platformId,
               )
-              const breakeven = calcBreakeven(p.cost, platformSettings, settings.taxRate)
+              const breakeven = calcBreakeven(
+                p.cost,
+                platformSettings,
+                settings.taxRate,
+                platformId,
+              )
               const currentMargin = calcMarginPercent(
                 p.currentPrice,
                 p.cost,
                 platformSettings,
                 settings.taxRate,
+                platformId,
               )
               const isHealthy = currentMargin >= settings.targetMargin
 
@@ -115,12 +123,14 @@ export function PricingTable({ platformId }: { platformId: PlatformId }) {
                     <div className="flex items-center gap-3">
                       <img
                         src={p.image}
-                        className="w-10 h-10 rounded bg-slate-800 object-cover"
+                        className="w-10 h-10 rounded bg-slate-800 object-cover shrink-0"
                         alt=""
                       />
                       <div className="flex flex-col">
                         <span className="font-medium text-slate-200">{p.sku}</span>
-                        <span className="text-xs text-slate-500">{p.name}</span>
+                        <span className="text-xs text-slate-500 truncate max-w-[200px]">
+                          {p.name}
+                        </span>
                       </div>
                     </div>
                   </TableCell>
@@ -141,7 +151,7 @@ export function PricingTable({ platformId }: { platformId: PlatformId }) {
                     <Badge
                       variant={isHealthy ? 'outline' : 'destructive'}
                       className={cn(
-                        'font-mono',
+                        'font-mono whitespace-nowrap',
                         isHealthy && 'text-emerald-400 border-emerald-500/30',
                       )}
                     >
