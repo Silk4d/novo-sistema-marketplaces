@@ -33,11 +33,17 @@ export interface TinyIntegration {
   lastSync: string | null
 }
 
+export interface PrintNodeSettings {
+  apiKey: string
+  printerId: string
+}
+
 export interface AppSettings {
   taxRate: number
   targetMargin: number
   platforms: Record<PlatformId, PlatformSettings>
   tinyIntegration: TinyIntegration
+  printNode: PrintNodeSettings
 }
 
 export type RfmSegment = 'Campeão' | 'Frequente' | 'Em Risco' | 'Fiel' | 'Novo'

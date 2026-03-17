@@ -3,8 +3,15 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { useToast } from '@/hooks/use-toast'
-import { Settings as SettingsIcon, Save, Database, KeyRound, Wifi } from 'lucide-react'
+import { Settings as SettingsIcon, Save, Database, KeyRound, Wifi, Printer } from 'lucide-react'
 import { PlatformId } from '@/lib/types'
 
 export default function Settings() {
@@ -17,7 +24,7 @@ export default function Settings() {
     })
     toast({
       title: 'Configurações Salvas',
-      description: 'Todos os preços e integrações foram atualizados.',
+      description: 'Todas as configurações foram atualizadas com sucesso.',
     })
   }
 
@@ -50,6 +57,12 @@ export default function Settings() {
   const updateTiny = (field: string, value: string) => {
     updateSettings({
       tinyIntegration: { ...settings.tinyIntegration, [field]: value },
+    })
+  }
+
+  const updatePrintNode = (field: string, value: string) => {
+    updateSettings({
+      printNode: { ...settings.printNode, [field]: value },
     })
   }
 
@@ -112,26 +125,43 @@ export default function Settings() {
 
         <Card className="bg-slate-900 border-slate-800 md:col-span-2 lg:col-span-3">
           <CardHeader>
-            <CardTitle>Impostos e Meta</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <Printer className="w-5 h-5 text-indigo-400" />
+              PrintNode (Impressão Automática)
+            </CardTitle>
+            <CardDescription>
+              Envio direto de etiquetas para impressoras térmicas locais (expedicao/obter).
+            </CardDescription>
           </CardHeader>
           <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label>Imposto (Ex: Simples Nacional %)</Label>
-              <Input
-                type="number"
-                value={settings.taxRate * 100}
-                onChange={(e) => updateSettings({ taxRate: Number(e.target.value) / 100 })}
-                className="bg-slate-950 border-slate-700 max-w-xs"
-              />
+              <Label>PrintNode API Key</Label>
+              <div className="relative max-w-xs">
+                <KeyRound className="absolute left-3 top-3 w-4 h-4 text-slate-500" />
+                <Input
+                  type="password"
+                  value={settings.printNode.apiKey}
+                  onChange={(e) => updatePrintNode('apiKey', e.target.value)}
+                  placeholder="••••••••••••••••"
+                  className="bg-slate-950 border-slate-700 pl-9"
+                />
+              </div>
             </div>
             <div className="space-y-2">
-              <Label>Margem Alvo de Contribuição (%)</Label>
-              <Input
-                type="number"
-                value={settings.targetMargin * 100}
-                onChange={(e) => updateSettings({ targetMargin: Number(e.target.value) / 100 })}
-                className="bg-slate-950 border-slate-700 max-w-xs"
-              />
+              <Label>Impressora Térmica Padrão</Label>
+              <Select
+                value={settings.printNode.printerId}
+                onValueChange={(val) => updatePrintNode('printerId', val)}
+              >
+                <SelectTrigger className="w-full max-w-xs bg-slate-950 border-slate-700">
+                  <SelectValue placeholder="Selecione a impressora" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="69283">Zebra GC420t (Estoque)</SelectItem>
+                  <SelectItem value="69284">Elgin L42 Pro (Expedição Principal)</SelectItem>
+                  <SelectItem value="69285">Brother QL-800 (Escritório)</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </CardContent>
         </Card>
@@ -148,15 +178,6 @@ export default function Settings() {
                   type="number"
                   value={plat.feeRate * 100}
                   onChange={(e) => updatePlatform(key as PlatformId, 'feeRate', e.target.value)}
-                  className="bg-slate-950 border-slate-700"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Taxa Fixa (R$)</Label>
-                <Input
-                  type="number"
-                  value={plat.fixedFee}
-                  onChange={(e) => updatePlatform(key as PlatformId, 'fixedFee', e.target.value)}
                   className="bg-slate-950 border-slate-700"
                 />
               </div>

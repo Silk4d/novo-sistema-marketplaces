@@ -84,6 +84,10 @@ const INITIAL_SETTINGS: AppSettings = {
     token: '',
     lastSync: null,
   },
+  printNode: {
+    apiKey: '',
+    printerId: '',
+  },
   platforms: {
     shopee: { name: 'Shopee', feeRate: 0.18, fixedFee: 3.0, shippingCost: 0 },
     amazon: { name: 'Amazon', feeRate: 0.15, fixedFee: 0, shippingCost: 5.0 },

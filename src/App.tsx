@@ -10,6 +10,7 @@ import Index from './pages/Index'
 import Pricing from './pages/Pricing'
 import Inventory from './pages/Inventory'
 import Bundles from './pages/Bundles'
+import Shipping from './pages/Shipping'
 import Settings from './pages/Settings'
 import NotFound from './pages/NotFound'
 
@@ -31,6 +32,7 @@ const App = () => (
               <Route path="/pricing" element={<Pricing />} />
               <Route path="/inventory" element={<Inventory />} />
               <Route path="/bundles" element={<Bundles />} />
+              <Route path="/shipping" element={<Shipping />} />
               <Route path="/settings" element={<Settings />} />
 
               <Route path="/crm/dashboard" element={<CrmDashboard />} />
