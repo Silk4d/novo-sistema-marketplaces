@@ -53,6 +53,7 @@ interface CrmStoreState {
   whatsappConnected: boolean
   moveLead: (leadId: string, toStageId: string) => void
   toggleWhatsappConnection: () => void
+  syncTinyOrders: () => void
 }
 
 const INITIAL_STAGES: CrmStage[] = [
@@ -61,6 +62,7 @@ const INITIAL_STAGES: CrmStage[] = [
   { id: 's3', name: 'Proposta', order: 3 },
   { id: 's4', name: 'Negociação', order: 4 },
   { id: 's5', name: 'Fechado Ganho', order: 5 },
+  { id: 's6', name: 'Pós-Venda', order: 6 },
 ]
 
 const INITIAL_LEADS: CrmLead[] = [
@@ -109,7 +111,7 @@ const INITIAL_LEADS: CrmLead[] = [
     name: 'João Santos',
     company: 'Eletrônicos SP',
     value: 12000,
-    stageId: 's1',
+    stageId: 's5',
     lastInteraction: '5 dias atrás',
     phone: '5511955555555',
     repId: 'r2',
@@ -199,6 +201,11 @@ export const CrmStoreProvider = ({ children }: { children: ReactNode }) => {
     setWhatsappConnected((prev) => !prev)
   }
 
+  const syncTinyOrders = () => {
+    // Automate moving "Fechado Ganho" to "Pós-Venda" mimicking an ERP status update
+    setLeads((prev) => prev.map((l) => (l.stageId === 's5' ? { ...l, stageId: 's6' } : l)))
+  }
+
   return (
     <StoreContext.Provider
       value={{
@@ -209,6 +216,7 @@ export const CrmStoreProvider = ({ children }: { children: ReactNode }) => {
         whatsappConnected,
         moveLead,
         toggleWhatsappConnection,
+        syncTinyOrders,
       }}
     >
       {children}

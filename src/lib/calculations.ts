@@ -6,21 +6,23 @@ export function calcTargetPrice(
   taxRate: number,
   targetMargin: number,
   platformId?: PlatformId,
+  shippingOverride?: number,
 ): number {
+  const shipping = shippingOverride !== undefined ? shippingOverride : settings.shippingCost
   const denominator = 1 - settings.feeRate - taxRate - targetMargin
   if (denominator <= 0) return 0
 
   if (platformId === 'meli_classic' || platformId === 'meli_premium') {
     const priceWithFixedFee = (cost + settings.fixedFee) / denominator
 
-    if (priceWithFixedFee < 79) {
+    if (priceWithFixedFee < 79 && shippingOverride === undefined) {
       return priceWithFixedFee
     } else {
-      return (cost + settings.shippingCost) / denominator
+      return (cost + shipping) / denominator
     }
   }
 
-  return (cost + settings.shippingCost + settings.fixedFee) / denominator
+  return (cost + shipping + settings.fixedFee) / denominator
 }
 
 export function calcBreakeven(
@@ -28,8 +30,9 @@ export function calcBreakeven(
   settings: PlatformSettings,
   taxRate: number,
   platformId?: PlatformId,
+  shippingOverride?: number,
 ): number {
-  return calcTargetPrice(cost, settings, taxRate, 0, platformId)
+  return calcTargetPrice(cost, settings, taxRate, 0, platformId, shippingOverride)
 }
 
 export function calcMarginPercent(
@@ -38,17 +41,18 @@ export function calcMarginPercent(
   settings: PlatformSettings,
   taxRate: number,
   platformId?: PlatformId,
+  shippingOverride?: number,
 ): number {
   if (price <= 0) return 0
 
   let currentFixedFee = settings.fixedFee
-  let currentShipping = settings.shippingCost
+  let currentShipping = shippingOverride !== undefined ? shippingOverride : settings.shippingCost
 
   if (platformId === 'meli_classic' || platformId === 'meli_premium') {
-    if (price < 79) {
-      currentShipping = 0 // Below R$79 uses only the fixed fee
-    } else {
-      currentFixedFee = 0 // Above R$79 uses flat shipping cost
+    if (price < 79 && shippingOverride === undefined) {
+      currentShipping = 0
+    } else if (shippingOverride === undefined) {
+      currentFixedFee = 0
     }
   }
 
@@ -75,9 +79,7 @@ export function calculateKitMetrics(
   const targetP2 = calcTargetPrice(p2.cost, settings, taxRate, targetMargin, platformId)
   const sumIndividualPrices = targetP1 + targetP2
 
-  // Assume kit is offered at a 10% discount compared to buying separately
   const kitPrice = sumIndividualPrices * 0.9
-
   const kitMarginPercent = calcMarginPercent(kitPrice, combinedCost, settings, taxRate, platformId)
 
   return {

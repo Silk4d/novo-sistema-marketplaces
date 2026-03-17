@@ -79,6 +79,11 @@ const INITIAL_PRODUCTS: Product[] = [
 const INITIAL_SETTINGS: AppSettings = {
   taxRate: 0.04, // 4% Simples Nacional
   targetMargin: 0.2, // 20%
+  tinyIntegration: {
+    integratorId: '',
+    token: '',
+    lastSync: null,
+  },
   platforms: {
     shopee: { name: 'Shopee', feeRate: 0.18, fixedFee: 3.0, shippingCost: 0 },
     amazon: { name: 'Amazon', feeRate: 0.15, fixedFee: 0, shippingCost: 5.0 },

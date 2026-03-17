@@ -1,12 +1,22 @@
-import React from 'react'
-import useCrmStore from '@/stores/useCrmStore'
+import React, { useState } from 'react'
+import useCrmStore, { CrmLead } from '@/stores/useCrmStore'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog'
 import { formatBRL } from '@/lib/utils'
-import { MessageCircle, Clock, Building2, User } from 'lucide-react'
+import { MessageCircle, Clock, Building2, User, RefreshCw, FileText } from 'lucide-react'
 
 export default function Pipeline() {
-  const { stages, leads, moveLead } = useCrmStore()
+  const { stages, leads, moveLead, syncTinyOrders } = useCrmStore()
+  const [pdfLead, setPdfLead] = useState<CrmLead | null>(null)
 
   const handleDragStart = (e: React.DragEvent, leadId: string) => {
     e.dataTransfer.setData('leadId', leadId)
@@ -24,11 +34,27 @@ export default function Pipeline() {
     }
   }
 
+  const handleOpenWhatsApp = () => {
+    if (pdfLead) {
+      window.open(`https://wa.me/${pdfLead.phone}`, '_blank')
+      setPdfLead(null)
+    }
+  }
+
   return (
     <div className="space-y-6 flex flex-col h-[calc(100vh-8rem)] animate-fade-in">
-      <div>
-        <h1 className="text-3xl font-display font-bold tracking-tight">Pipeline de Vendas</h1>
-        <p className="text-slate-400">Gerencie seus leads através do funil comercial.</p>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h1 className="text-3xl font-display font-bold tracking-tight">Pipeline de Vendas</h1>
+          <p className="text-slate-400">Automação de status integrada com Tiny ERP.</p>
+        </div>
+        <Button
+          onClick={syncTinyOrders}
+          variant="outline"
+          className="border-indigo-500/50 text-indigo-400 hover:bg-indigo-500/10"
+        >
+          <RefreshCw className="w-4 h-4 mr-2" /> Forçar Automação Tiny
+        </Button>
       </div>
 
       <div className="flex gap-6 overflow-x-auto flex-1 pb-4">
@@ -80,16 +106,16 @@ export default function Pipeline() {
                           <Clock className="w-3 h-3 mr-1" />
                           {lead.lastInteraction}
                         </div>
-                        <a
-                          href={`https://wa.me/${lead.phone}`}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-xs font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 border border-emerald-500/20 bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20 h-7 px-2"
-                          onClick={(e) => e.stopPropagation()}
+                        <button
+                          className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-xs font-medium border border-emerald-500/20 bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20 h-7 px-2 transition-colors"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setPdfLead(lead)
+                          }}
                         >
                           <MessageCircle className="w-3 h-3 mr-1" />
                           Chat
-                        </a>
+                        </button>
                       </div>
                     </CardContent>
                   </Card>
@@ -104,6 +130,37 @@ export default function Pipeline() {
           )
         })}
       </div>
+
+      <Dialog open={!!pdfLead} onOpenChange={(open) => !open && setPdfLead(null)}>
+        <DialogContent className="bg-slate-900 border-slate-800">
+          <DialogHeader>
+            <DialogTitle>Automação de Orçamento via WhatsApp</DialogTitle>
+            <DialogDescription>
+              Gerar PDF da proposta comercial de {formatBRL(pdfLead?.value || 0)} para{' '}
+              {pdfLead?.company}?
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4 flex justify-center">
+            <div className="bg-slate-950 border border-slate-800 p-6 rounded-lg flex flex-col items-center gap-3 w-full max-w-xs">
+              <FileText className="w-12 h-12 text-emerald-400/80" />
+              <p className="text-sm font-medium text-slate-300">
+                Proposta_{pdfLead?.company.replace(/\s/g, '')}.pdf
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setPdfLead(null)}>
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleOpenWhatsApp}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white"
+            >
+              <MessageCircle className="w-4 h-4 mr-2" /> Gerar PDF & Iniciar Chat
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

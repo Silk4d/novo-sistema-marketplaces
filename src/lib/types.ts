@@ -27,8 +27,17 @@ export interface PlatformSettings {
   shippingCost: number
 }
 
+export interface TinyIntegration {
+  integratorId: string
+  token: string
+  lastSync: string | null
+}
+
 export interface AppSettings {
   taxRate: number
   targetMargin: number
   platforms: Record<PlatformId, PlatformSettings>
+  tinyIntegration: TinyIntegration
 }
+
+export type RfmSegment = 'Campeão' | 'Frequente' | 'Em Risco' | 'Fiel' | 'Novo'

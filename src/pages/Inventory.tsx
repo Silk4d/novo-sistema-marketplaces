@@ -11,21 +11,72 @@ import {
 } from '@/components/ui/table'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
-import { PackageSearch } from 'lucide-react'
+import { Card, CardContent } from '@/components/ui/card'
+import { PackageSearch, AlertTriangle, Layers, TrendingUp } from 'lucide-react'
 
 export default function Inventory() {
   const { products, updateProduct } = useDataStore()
+
+  const globalStock = products.reduce((acc, p) => acc + p.stock, 0)
+  const globalVelocity = products.reduce((acc, p) => acc + p.avgDailySales, 0)
+  const itemsInRupture = products.filter(
+    (p) => calcDaysOfCover(p.stock, p.avgDailySales) < p.leadTime,
+  ).length
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-2">
         <h1 className="text-3xl font-display font-bold tracking-tight flex items-center gap-3">
           <PackageSearch className="w-8 h-8 text-indigo-500" />
-          Estoque e Ruptura
+          Estoque e Ruptura Global
         </h1>
         <p className="text-slate-400">
-          Analise os Dias de Cobertura (DoC) e planeje reposições baseadas no giro de vendas.
+          Monitoramento cross-channel de demanda total vs estoque atualizado.
         </p>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card className="bg-slate-900 border-slate-800 shadow-elevation animate-fade-in-up">
+          <CardContent className="p-4 flex items-center gap-4">
+            <div className="w-12 h-12 rounded-full bg-indigo-500/10 flex items-center justify-center text-indigo-400">
+              <Layers className="w-6 h-6" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-slate-400">Estoque Total Global</p>
+              <p className="text-2xl font-bold text-slate-100">{formatNumber(globalStock)} un.</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card
+          className="bg-slate-900 border-slate-800 shadow-elevation animate-fade-in-up"
+          style={{ animationDelay: '100ms' }}
+        >
+          <CardContent className="p-4 flex items-center gap-4">
+            <div className="w-12 h-12 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-400">
+              <TrendingUp className="w-6 h-6" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-slate-400">Giro Diário (Todos os Canais)</p>
+              <p className="text-2xl font-bold text-slate-100">
+                {formatNumber(globalVelocity)} un/dia
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card
+          className="bg-slate-900 border-slate-800 shadow-elevation animate-fade-in-up"
+          style={{ animationDelay: '200ms' }}
+        >
+          <CardContent className="p-4 flex items-center gap-4">
+            <div className="w-12 h-12 rounded-full bg-rose-500/10 flex items-center justify-center text-rose-500">
+              <AlertTriangle className="w-6 h-6" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-slate-400">SKUs em Risco (Cross-Channel)</p>
+              <p className="text-2xl font-bold text-rose-500">{itemsInRupture} itens</p>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       <div className="border border-slate-800 rounded-lg overflow-hidden bg-slate-900 shadow-elevation animate-fade-in">
@@ -33,22 +84,18 @@ export default function Inventory() {
           <TableHeader className="bg-slate-800/50">
             <TableRow className="border-slate-800">
               <TableHead>Produto</TableHead>
-              <TableHead className="text-right">Estoque Atual</TableHead>
-              <TableHead className="text-right">Vendas/Dia</TableHead>
+              <TableHead className="text-right">Estoque Global</TableHead>
+              <TableHead className="text-right">Vendas/Dia Global</TableHead>
               <TableHead className="text-center">Lead Time (Dias)</TableHead>
               <TableHead className="text-right">DoC</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="text-right">Sugestão (60d)</TableHead>
+              <TableHead>Status Cross-Channel</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {products.map((p) => {
               const doc = calcDaysOfCover(p.stock, p.avgDailySales)
-              const orderQty = Math.max(0, Math.ceil(60 * p.avgDailySales - p.stock))
-
               const isCritical = doc < p.leadTime
               const isWarning = doc >= p.leadTime && doc < p.leadTime * 1.5
-
               const docPercent = Math.min((doc / 60) * 100, 100)
 
               return (
@@ -104,12 +151,10 @@ export default function Inventory() {
                   </TableCell>
                   <TableCell>
                     {isCritical ? (
-                      <Badge
-                        variant="destructive"
-                        className="bg-rose-500/20 text-rose-500 hover:bg-rose-500/30 border-rose-500/50"
-                      >
-                        Crítico
-                      </Badge>
+                      <div className="flex items-center gap-1.5 text-rose-500 bg-rose-500/10 px-2 py-1 rounded-md w-max border border-rose-500/20">
+                        <AlertTriangle className="w-3.5 h-3.5" />
+                        <span className="text-xs font-semibold">Alerta Crítico</span>
+                      </div>
                     ) : isWarning ? (
                       <Badge variant="outline" className="text-amber-500 border-amber-500/50">
                         Atenção
@@ -119,16 +164,6 @@ export default function Inventory() {
                         Saudável
                       </Badge>
                     )}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <span
-                      className={cn(
-                        'font-mono font-bold',
-                        orderQty > 0 ? 'text-indigo-400' : 'text-slate-500',
-                      )}
-                    >
-                      +{formatNumber(orderQty)}
-                    </span>
                   </TableCell>
                 </TableRow>
               )

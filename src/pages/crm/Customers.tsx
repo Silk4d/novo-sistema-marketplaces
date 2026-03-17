@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import useCrmStore from '@/stores/useCrmStore'
+import useCrmStore, { Customer } from '@/stores/useCrmStore'
 import {
   Table,
   TableBody,
@@ -15,22 +15,51 @@ import {
   SheetTitle,
   SheetDescription,
 } from '@/components/ui/sheet'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog'
 import { Badge } from '@/components/ui/badge'
-import { formatBRL } from '@/lib/utils'
-import { MessageCircle, Mail, Phone, ShoppingBag, CreditCard } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { formatBRL, cn } from '@/lib/utils'
+import { MessageCircle, Mail, Phone, ShoppingBag, CreditCard, FileText } from 'lucide-react'
 import { ScrollArea } from '@/components/ui/scroll-area'
 
 export default function Customers() {
   const { customers } = useCrmStore()
   const [selectedCustomer, setSelectedCustomer] = useState<string | null>(null)
+  const [pdfCustomer, setPdfCustomer] = useState<Customer | null>(null)
 
   const activeCust = customers.find((c) => c.id === selectedCustomer)
+
+  const getRfmStatus = (c: Customer) => {
+    if (c.totalSpent > 100000 && c.orders.length > 1)
+      return { label: 'Campeão', color: 'bg-emerald-500/20 text-emerald-500 border-emerald-500/30' }
+    if (c.orders.length > 1)
+      return { label: 'Frequente', color: 'bg-indigo-500/20 text-indigo-400 border-indigo-500/30' }
+    if (c.creditStatus === 'Bloqueado')
+      return { label: 'Em Risco', color: 'bg-rose-500/20 text-rose-500 border-rose-500/30' }
+    return { label: 'Fiel', color: 'bg-blue-500/20 text-blue-400 border-blue-500/30' }
+  }
+
+  const handleOpenWhatsApp = () => {
+    if (pdfCustomer) {
+      window.open(`https://wa.me/${pdfCustomer.phone}`, '_blank')
+      setPdfCustomer(null)
+    }
+  }
 
   return (
     <div className="space-y-6 animate-fade-in">
       <div>
-        <h1 className="text-3xl font-display font-bold tracking-tight">Hub de Clientes</h1>
-        <p className="text-slate-400">Banco de dados sincronizado com Tiny ERP.</p>
+        <h1 className="text-3xl font-display font-bold tracking-tight">Hub de Clientes & RFM</h1>
+        <p className="text-slate-400">
+          Banco de dados com segmentação automática baseada no histórico Tiny.
+        </p>
       </div>
 
       <div className="border border-slate-800 rounded-lg overflow-hidden bg-slate-900 shadow-elevation">
@@ -38,60 +67,59 @@ export default function Customers() {
           <TableHeader className="bg-slate-800/50">
             <TableRow className="border-slate-800">
               <TableHead>Cliente / Empresa</TableHead>
-              <TableHead>Contato</TableHead>
               <TableHead>Segmento (NCM)</TableHead>
-              <TableHead className="text-right">Total Gasto</TableHead>
+              <TableHead>Segmentação RFM</TableHead>
+              <TableHead className="text-right">LTV</TableHead>
               <TableHead>Status Crédito</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {customers.map((c) => (
-              <TableRow
-                key={c.id}
-                className="cursor-pointer hover:bg-slate-800/30 border-slate-800 transition-colors"
-                onClick={() => setSelectedCustomer(c.id)}
-              >
-                <TableCell className="font-medium text-slate-200">{c.name}</TableCell>
-                <TableCell>
-                  <div className="text-sm text-slate-400 flex flex-col gap-1.5">
-                    <span className="flex items-center gap-2">
-                      <Phone className="w-3 h-3" /> {c.phone}
-                    </span>
-                    <span className="flex items-center gap-2">
-                      <Mail className="w-3 h-3" /> {c.email}
-                    </span>
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <Badge variant="outline" className="bg-slate-950 border-slate-700">
-                    {c.ncmSegment}
-                  </Badge>
-                </TableCell>
-                <TableCell className="text-right font-mono text-emerald-400 font-medium">
-                  {formatBRL(c.totalSpent)}
-                </TableCell>
-                <TableCell>
-                  <Badge
-                    variant={
-                      c.creditStatus === 'Aprovado'
-                        ? 'default'
-                        : c.creditStatus === 'Bloqueado'
-                          ? 'destructive'
-                          : 'secondary'
-                    }
-                    className={
-                      c.creditStatus === 'Aprovado'
-                        ? 'bg-emerald-500/20 text-emerald-500 hover:bg-emerald-500/30 border-emerald-500/50'
-                        : c.creditStatus === 'Em Análise'
-                          ? 'bg-amber-500/20 text-amber-500 border-amber-500/50 hover:bg-amber-500/30'
+            {customers.map((c) => {
+              const rfm = getRfmStatus(c)
+              return (
+                <TableRow
+                  key={c.id}
+                  className="cursor-pointer hover:bg-slate-800/30 border-slate-800 transition-colors"
+                  onClick={() => setSelectedCustomer(c.id)}
+                >
+                  <TableCell>
+                    <div className="font-medium text-slate-200">{c.name}</div>
+                    <div className="text-xs text-slate-500 mt-1">{c.email}</div>
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant="outline" className="bg-slate-950 border-slate-700 font-normal">
+                      {c.ncmSegment}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant="outline" className={cn('font-medium', rfm.color)}>
+                      {rfm.label}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-right font-mono text-slate-300 font-medium">
+                    {formatBRL(c.totalSpent)}
+                  </TableCell>
+                  <TableCell>
+                    <Badge
+                      variant={
+                        c.creditStatus === 'Aprovado'
+                          ? 'default'
+                          : c.creditStatus === 'Bloqueado'
+                            ? 'destructive'
+                            : 'secondary'
+                      }
+                      className={
+                        c.creditStatus === 'Aprovado'
+                          ? 'bg-emerald-500/20 text-emerald-500 hover:bg-emerald-500/30'
                           : ''
-                    }
-                  >
-                    {c.creditStatus}
-                  </Badge>
-                </TableCell>
-              </TableRow>
-            ))}
+                      }
+                    >
+                      {c.creditStatus}
+                    </Badge>
+                  </TableCell>
+                </TableRow>
+              )
+            })}
           </TableBody>
         </Table>
       </div>
@@ -103,24 +131,27 @@ export default function Customers() {
               <div className="p-6 border-b border-slate-800 bg-slate-900/50">
                 <SheetHeader className="text-left">
                   <SheetTitle className="text-xl text-slate-100">{activeCust.name}</SheetTitle>
-                  <SheetDescription className="text-slate-500">
+                  <SheetDescription className="text-slate-500 flex items-center justify-between">
                     ID ERP: {activeCust.id.toUpperCase()}
+                    <Badge
+                      variant="outline"
+                      className={cn('text-[10px]', getRfmStatus(activeCust).color)}
+                    >
+                      {getRfmStatus(activeCust).label}
+                    </Badge>
                   </SheetDescription>
                 </SheetHeader>
 
                 <div className="flex gap-3 mt-6">
-                  <a
-                    href={`https://wa.me/${activeCust.phone}`}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-emerald-600 text-white hover:bg-emerald-700 h-10 px-4 flex-1 shadow-sm"
+                  <Button
+                    onClick={() => setPdfCustomer(activeCust)}
+                    className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm"
                   >
-                    <MessageCircle className="w-4 h-4 mr-2" />
-                    Iniciar WhatsApp
-                  </a>
+                    <MessageCircle className="w-4 h-4 mr-2" /> Contato Integrado
+                  </Button>
                   <a
                     href={`mailto:${activeCust.email}`}
-                    className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-slate-700 bg-slate-800 hover:bg-slate-700 h-10 w-10 shrink-0"
+                    className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium border border-slate-700 bg-slate-800 hover:bg-slate-700 h-10 w-10 shrink-0 transition-colors"
                   >
                     <Mail className="w-4 h-4 text-slate-300" />
                   </a>
@@ -131,33 +162,6 @@ export default function Customers() {
                 <div className="p-6 space-y-8">
                   <div>
                     <h3 className="text-sm font-medium text-slate-400 mb-4 flex items-center gap-2">
-                      <CreditCard className="w-4 h-4 text-indigo-400" /> Informações Financeiras
-                    </h3>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="bg-slate-900/50 p-4 rounded-lg border border-slate-800/80">
-                        <p className="text-xs text-slate-500 mb-2">Status de Crédito</p>
-                        <Badge
-                          variant={activeCust.creditStatus === 'Aprovado' ? 'default' : 'secondary'}
-                          className={
-                            activeCust.creditStatus === 'Aprovado'
-                              ? 'bg-emerald-500/20 text-emerald-500'
-                              : ''
-                          }
-                        >
-                          {activeCust.creditStatus}
-                        </Badge>
-                      </div>
-                      <div className="bg-slate-900/50 p-4 rounded-lg border border-slate-800/80">
-                        <p className="text-xs text-slate-500 mb-1">Lifetime Value</p>
-                        <p className="font-mono font-bold text-emerald-400">
-                          {formatBRL(activeCust.totalSpent)}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div>
-                    <h3 className="text-sm font-medium text-slate-400 mb-4 flex items-center gap-2">
                       <ShoppingBag className="w-4 h-4 text-amber-400" /> Histórico de Pedidos (Tiny
                       ERP)
                     </h3>
@@ -165,7 +169,7 @@ export default function Customers() {
                       {activeCust.orders.map((order) => (
                         <div
                           key={order.id}
-                          className="bg-slate-900/50 p-4 rounded-lg border border-slate-800/80 flex items-center justify-between hover:bg-slate-900 transition-colors"
+                          className="bg-slate-900/50 p-4 rounded-lg border border-slate-800/80 flex items-center justify-between"
                         >
                           <div>
                             <p className="font-medium text-sm text-slate-200">{order.id}</p>
@@ -184,9 +188,6 @@ export default function Customers() {
                           </div>
                         </div>
                       ))}
-                      {activeCust.orders.length === 0 && (
-                        <p className="text-sm text-slate-500 italic">Nenhum pedido encontrado.</p>
-                      )}
                     </div>
                   </div>
                 </div>
@@ -195,6 +196,37 @@ export default function Customers() {
           )}
         </SheetContent>
       </Sheet>
+
+      <Dialog open={!!pdfCustomer} onOpenChange={(open) => !open && setPdfCustomer(null)}>
+        <DialogContent className="bg-slate-900 border-slate-800">
+          <DialogHeader>
+            <DialogTitle>Gerar Cotação e Contatar</DialogTitle>
+            <DialogDescription>
+              Deseja gerar o PDF com o histórico e catálogo atualizado para {pdfCustomer?.name}{' '}
+              antes de abrir o WhatsApp?
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4 flex justify-center">
+            <div className="bg-slate-950 border border-slate-800 p-6 rounded-lg flex flex-col items-center gap-3 w-full max-w-xs">
+              <FileText className="w-12 h-12 text-rose-400 opacity-80" />
+              <p className="text-sm font-medium text-slate-300">
+                Cotacao_{pdfCustomer?.name.replace(/\s/g, '')}.pdf
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setPdfCustomer(null)}>
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleOpenWhatsApp}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white"
+            >
+              <MessageCircle className="w-4 h-4 mr-2" /> Gerar & Abrir WhatsApp
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
