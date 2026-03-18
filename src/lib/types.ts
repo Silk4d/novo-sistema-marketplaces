@@ -18,6 +18,12 @@ export interface Product {
   stock: number
   avgDailySales: number
   leadTime: number
+  weight: number
+  dimensions: {
+    height: number
+    width: number
+    length: number
+  }
 }
 
 export interface PlatformSettings {
@@ -38,12 +44,18 @@ export interface PrintNodeSettings {
   printerId: string
 }
 
+export interface ShippingGatewaySettings {
+  active: boolean
+  name: string
+}
+
 export interface AppSettings {
   taxRate: number
   targetMargin: number
   platforms: Record<PlatformId, PlatformSettings>
   tinyIntegration: TinyIntegration
   printNode: PrintNodeSettings
+  shippingGateways: Record<string, ShippingGatewaySettings>
 }
 
 export type RfmSegment = 'Campeão' | 'Frequente' | 'Em Risco' | 'Fiel' | 'Novo'

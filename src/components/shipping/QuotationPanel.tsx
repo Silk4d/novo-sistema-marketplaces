@@ -30,64 +30,6 @@ interface ShippingQuote {
   reliabilityScore: number
 }
 
-const MOCK_QUOTES: ShippingQuote[] = [
-  {
-    id: '1',
-    carrier: 'Correios',
-    service: 'PAC',
-    gateway: 'Melhor Envio',
-    basePrice: 18.5,
-    insurance: 1.5,
-    netPrice: 20.0,
-    deliveryDays: 7,
-    reliabilityScore: 85,
-  },
-  {
-    id: '2',
-    carrier: 'Loggi',
-    service: 'Express',
-    gateway: 'Frenet',
-    basePrice: 24.0,
-    insurance: 1.0,
-    netPrice: 25.0,
-    deliveryDays: 4,
-    reliabilityScore: 80,
-  },
-  {
-    id: '3',
-    carrier: 'Azul Cargo',
-    service: 'Amanhã',
-    gateway: 'SuperFrete',
-    basePrice: 24.5,
-    insurance: 1.2,
-    netPrice: 25.7,
-    deliveryDays: 3,
-    reliabilityScore: 95,
-  },
-  {
-    id: '4',
-    carrier: 'Jadlog',
-    service: '.Com',
-    gateway: 'Frenet',
-    basePrice: 22.0,
-    insurance: 2.0,
-    netPrice: 24.0,
-    deliveryDays: 6,
-    reliabilityScore: 82,
-  },
-  {
-    id: '5',
-    carrier: 'Correios',
-    service: 'SEDEX',
-    gateway: 'Melhor Envio',
-    basePrice: 35.0,
-    insurance: 2.0,
-    netPrice: 37.0,
-    deliveryDays: 2,
-    reliabilityScore: 90,
-  },
-]
-
 export default function QuotationPanel() {
   const { settings } = useDataStore()
   const { toast } = useToast()
@@ -114,11 +56,86 @@ export default function QuotationPanel() {
       return
     }
 
+    const activeGateways = Object.values(settings.shippingGateways)
+      .filter((g) => g.active)
+      .map((g) => g.name)
+
+    if (activeGateways.length === 0) {
+      toast({
+        title: 'Sem Gateways Ativos',
+        description: 'Ative ao menos um gateway nas Configurações.',
+        variant: 'destructive',
+      })
+      return
+    }
+
     setLoading(true)
     setTimeout(() => {
-      setQuotes(MOCK_QUOTES)
+      const MOCK_QUOTES: ShippingQuote[] = [
+        {
+          id: '1',
+          carrier: 'Correios',
+          service: 'PAC',
+          gateway: 'Melhor Envio',
+          basePrice: 18.5,
+          insurance: 1.5,
+          netPrice: 20.0,
+          deliveryDays: 7,
+          reliabilityScore: 85,
+        },
+        {
+          id: '2',
+          carrier: 'Loggi',
+          service: 'Express',
+          gateway: 'Frenet',
+          basePrice: 24.0,
+          insurance: 1.0,
+          netPrice: 25.0,
+          deliveryDays: 4,
+          reliabilityScore: 80,
+        },
+        {
+          id: '3',
+          carrier: 'Azul Cargo',
+          service: 'Amanhã',
+          gateway: 'SuperFrete',
+          basePrice: 24.5,
+          insurance: 1.2,
+          netPrice: 25.7,
+          deliveryDays: 3,
+          reliabilityScore: 95,
+        },
+        {
+          id: '4',
+          carrier: 'Jadlog',
+          service: '.Com',
+          gateway: 'Frenet',
+          basePrice: 22.0,
+          insurance: 2.0,
+          netPrice: 24.0,
+          deliveryDays: 6,
+          reliabilityScore: 82,
+        },
+        {
+          id: '5',
+          carrier: 'Correios',
+          service: 'SEDEX',
+          gateway: 'Correios',
+          basePrice: 35.0,
+          insurance: 2.0,
+          netPrice: 37.0,
+          deliveryDays: 2,
+          reliabilityScore: 90,
+        },
+      ]
+
+      const filteredQuotes = MOCK_QUOTES.filter((q) => activeGateways.includes(q.gateway))
+      setQuotes(filteredQuotes)
       setLoading(false)
-      toast({ title: 'Cotação Concluída', description: 'Gateways consultados via Tiny ERP.' })
+      toast({
+        title: 'Cotação Concluída',
+        description: `Gateways consultados: ${activeGateways.join(', ')}`,
+      })
     }, 1200)
   }
 
@@ -132,17 +149,7 @@ export default function QuotationPanel() {
 
     if (eligible.length > 0) {
       const sortedByPrice = [...eligible].sort((a, b) => a.netPrice - b.netPrice)
-      const lowestPrice = sortedByPrice[0].netPrice
-      const candidates = sortedByPrice.filter((q) => q.netPrice - lowestPrice <= 2.0)
-
-      const bestCandidate = candidates.reduce((prev, current) =>
-        prev.reliabilityScore > current.reliabilityScore ? prev : current,
-      )
-
-      bestId = bestCandidate.id
-      if (bestCandidate.id !== sortedByPrice[0].id) {
-        isArbitrage = true
-      }
+      bestId = sortedByPrice[0].id
     }
 
     return withSlaStatus
@@ -156,7 +163,7 @@ export default function QuotationPanel() {
         <CardHeader className="pb-4">
           <CardTitle className="text-lg text-slate-200">Simulador de Frete Multi-Gateway</CardTitle>
           <CardDescription>
-            Consulta via expedicao/obter_cotacoes (Frenet, Melhor Envio, SuperFrete, Correios)
+            Consulta via expedicao/obter_cotacoes para pedidos Off-Marketplace.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -216,11 +223,11 @@ export default function QuotationPanel() {
               className="col-span-2 md:col-span-1 w-full bg-indigo-600 hover:bg-indigo-700 text-white"
             >
               {loading ? (
-                <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                <Zap className="w-4 h-4 mr-2 animate-spin" />
               ) : (
                 <Search className="w-4 h-4 mr-2" />
               )}{' '}
-              Cotar
+              Cotar Auto
             </Button>
           </div>
         </CardContent>
@@ -282,21 +289,8 @@ export default function QuotationPanel() {
                       {q.isBest ? (
                         <div className="flex flex-col items-center gap-1">
                           <Badge className="bg-emerald-500 hover:bg-emerald-600 text-white border-none px-2 py-0.5">
-                            <CheckCircle2 className="w-3 h-3 mr-1" /> Melhor Escolha
+                            <CheckCircle2 className="w-3 h-3 mr-1" /> Melhor Escolha (≤ 5d)
                           </Badge>
-                          {q.isArbitrage && (
-                            <Tooltip>
-                              <TooltipTrigger>
-                                <span className="flex items-center text-[10px] text-emerald-400/80 cursor-help">
-                                  <ShieldCheck className="w-3 h-3 mr-0.5" /> Arbitragem SLA
-                                </span>
-                              </TooltipTrigger>
-                              <TooltipContent className="bg-slate-800 border-slate-700 text-slate-200">
-                                Preço base próximo (&lt; R$ 2,00), priorizado por melhor
-                                confiabilidade histórica ({q.reliabilityScore}/100).
-                              </TooltipContent>
-                            </Tooltip>
-                          )}
                         </div>
                       ) : q.isSlaFail ? (
                         <Tooltip>

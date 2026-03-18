@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
+import { Switch } from '@/components/ui/switch'
 import {
   Select,
   SelectContent,
@@ -11,7 +12,15 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { useToast } from '@/hooks/use-toast'
-import { Settings as SettingsIcon, Save, Database, KeyRound, Wifi, Printer } from 'lucide-react'
+import {
+  Settings as SettingsIcon,
+  Save,
+  Database,
+  KeyRound,
+  Wifi,
+  Printer,
+  Truck,
+} from 'lucide-react'
 import { PlatformId } from '@/lib/types'
 
 export default function Settings() {
@@ -66,6 +75,15 @@ export default function Settings() {
     })
   }
 
+  const updateGateway = (gatewayKey: string, active: boolean) => {
+    updateSettings({
+      shippingGateways: {
+        ...settings.shippingGateways,
+        [gatewayKey]: { ...settings.shippingGateways[gatewayKey], active },
+      },
+    })
+  }
+
   return (
     <div className="space-y-6 animate-fade-in max-w-full">
       <div className="flex flex-col gap-2">
@@ -93,7 +111,7 @@ export default function Settings() {
               <Input
                 value={settings.tinyIntegration.integratorId}
                 onChange={(e) => updateTiny('integratorId', e.target.value)}
-                placeholder="Ex: 12345"
+                placeholder="Ex: 15753"
                 className="bg-slate-950 border-slate-700 max-w-xs"
               />
             </div>
@@ -120,6 +138,36 @@ export default function Settings() {
                 </span>
               )}
             </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-slate-900 border-slate-800 md:col-span-2 lg:col-span-3">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Truck className="w-5 h-5 text-indigo-400" />
+              Gateways de Frete (Off-Marketplace)
+            </CardTitle>
+            <CardDescription>
+              Ative ou desative gateways para as cotações automáticas de pedidos fora do
+              marketplace.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {Object.entries(settings.shippingGateways).map(([key, gateway]) => (
+              <div
+                key={key}
+                className="flex items-center justify-between p-4 border border-slate-800 rounded-lg bg-slate-950"
+              >
+                <Label className="font-medium cursor-pointer" htmlFor={`gateway-${key}`}>
+                  {gateway.name}
+                </Label>
+                <Switch
+                  id={`gateway-${key}`}
+                  checked={gateway.active}
+                  onCheckedChange={(checked) => updateGateway(key, checked)}
+                />
+              </div>
+            ))}
           </CardContent>
         </Card>
 

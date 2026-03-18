@@ -20,6 +20,7 @@ import {
   Users,
   Target,
   Truck,
+  ClipboardList,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -29,9 +30,10 @@ export function AppSidebar() {
   const navItems = [
     { name: 'Visão Geral', path: '/', icon: LayoutDashboard },
     { name: 'Precificação Dinâmica', path: '/pricing', icon: Tag },
-    { name: 'Estoque e Ruptura', path: '/inventory', icon: Package },
+    { name: 'Produtos e Estoque', path: '/inventory', icon: Package },
     { name: 'Sugestões de Kits', path: '/bundles', icon: PackagePlus },
-    { name: 'Painel de Expedição', path: '/shipping', icon: Truck },
+    { name: 'Painel de Expedição', path: '/expedition', icon: ClipboardList },
+    { name: 'Cotações Off-MKP', path: '/shipping', icon: Truck },
   ]
 
   const crmItems = [
