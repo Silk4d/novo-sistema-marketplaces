@@ -89,8 +89,8 @@ const INITIAL_PRODUCTS: Product[] = [
 ]
 
 const INITIAL_SETTINGS: AppSettings = {
-  taxRate: 0.04, // 4% Simples Nacional
-  targetMargin: 0.2, // 20%
+  taxRate: 0.04,
+  targetMargin: 0.2,
   tinyIntegration: {
     integratorId: '15753',
     token: 'e03db1c0f47be07c80d2a111f5730689a0c97d5c00d61ac1ef284b4',
@@ -130,6 +130,7 @@ const INITIAL_SETTINGS: AppSettings = {
 interface StoreState {
   products: Product[]
   settings: AppSettings
+  setProducts: React.Dispatch<React.SetStateAction<Product[]>>
   updateProduct: (id: string, data: Partial<Product>) => void
   updateSettings: (data: Partial<AppSettings>) => void
 }
@@ -149,7 +150,9 @@ export const DataStoreProvider = ({ children }: { children: ReactNode }) => {
   }
 
   return (
-    <StoreContext.Provider value={{ products, settings, updateProduct, updateSettings }}>
+    <StoreContext.Provider
+      value={{ products, settings, setProducts, updateProduct, updateSettings }}
+    >
       {children}
     </StoreContext.Provider>
   )
