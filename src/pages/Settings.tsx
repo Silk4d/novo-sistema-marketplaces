@@ -25,19 +25,78 @@ import {
 } from 'lucide-react'
 import { PlatformId, Product } from '@/lib/types'
 
+const TINY_MOCK_DATA = [
+  {
+    id: 'tiny-mock-1',
+    sku: 'SMW-01',
+    name: 'Smartwatch Pro X (Sincronizado)',
+    image: 'https://img.usecurling.com/p/100/100?q=smartwatch&color=blue',
+    stock: 154,
+    currentPrice: 249.9,
+    cost: 120,
+    ncm: '8517.62.77',
+    weight: 0.3,
+    dimensions: { height: 10, width: 10, length: 15 },
+    avgDailySales: 3,
+    leadTime: 15,
+  },
+  {
+    id: 'tiny-mock-2',
+    sku: 'EAR-02',
+    name: 'Fones Bluetooth TWS V2',
+    image: 'https://img.usecurling.com/p/100/100?q=earbuds&color=black',
+    stock: 89,
+    currentPrice: 99.9,
+    cost: 45,
+    ncm: '8518.30.00',
+    weight: 0.15,
+    dimensions: { height: 5, width: 10, length: 10 },
+    avgDailySales: 5,
+    leadTime: 10,
+  },
+  {
+    id: 'tiny-mock-3',
+    sku: 'CAS-03',
+    name: 'Capa Anti-Impacto iPhone 14/15',
+    image: 'https://img.usecurling.com/p/100/100?q=phone%20case&color=red',
+    stock: 412,
+    currentPrice: 39.9,
+    cost: 12,
+    ncm: '3926.90.90',
+    weight: 0.05,
+    dimensions: { height: 2, width: 8, length: 16 },
+    avgDailySales: 15,
+    leadTime: 7,
+  },
+  {
+    id: 'tiny-mock-4',
+    sku: 'TNY-NEW1',
+    name: 'Mousepad Gamer Extra Grande',
+    image: 'https://img.usecurling.com/p/100/100?q=mousepad',
+    stock: 120,
+    currentPrice: 89.9,
+    cost: 25.0,
+    ncm: '3926.90.90',
+    weight: 0.5,
+    dimensions: { height: 1, width: 40, length: 90 },
+    avgDailySales: 8,
+    leadTime: 3,
+  },
+]
+
 export default function Settings() {
   const { settings, updateSettings, setProducts } = useDataStore()
   const { toast } = useToast()
-
   const [isSyncing, setIsSyncing] = useState(false)
   const [syncTime, setSyncTime] = useState(0)
   const timerRef = useRef<NodeJS.Timeout | null>(null)
 
-  useEffect(() => {
-    return () => {
+  useEffect(
+    () => () => {
       if (timerRef.current) clearInterval(timerRef.current)
-    }
-  }, [])
+    },
+    [],
+  )
 
   const handleSave = () => {
     toast({
@@ -47,7 +106,8 @@ export default function Settings() {
   }
 
   const handleTestConnection = async () => {
-    if (!settings.tinyIntegration.token || !settings.tinyIntegration.integratorId) {
+    const { token, integratorId } = settings.tinyIntegration
+    if (!token || !integratorId) {
       toast({
         title: 'Erro na Conexão',
         description: 'Preencha o Token e o Identificador primeiro.',
@@ -58,17 +118,15 @@ export default function Settings() {
 
     setIsSyncing(true)
     setSyncTime(0)
-
     const startTime = Date.now()
-    timerRef.current = setInterval(() => {
-      setSyncTime(Date.now() - startTime)
-    }, 100)
+    timerRef.current = setInterval(() => setSyncTime(Date.now() - startTime), 100)
 
     try {
       const formData = new URLSearchParams()
-      formData.append('token', settings.tinyIntegration.token)
+      formData.append('token', token)
       formData.append('formato', 'json')
-      formData.append('idIntegracao', settings.tinyIntegration.integratorId)
+      formData.append('situacao', 'A') // Target specific active SKUs
+      formData.append('idIntegracao', integratorId) // Explicitly send the integrator identifier
 
       let syncedTinyData: Array<Partial<Product> & { sku: string }> = []
 
@@ -76,13 +134,10 @@ export default function Settings() {
         const response = await fetch('https://api.tiny.com.br/api2/produtos.pesquisa.php', {
           method: 'POST',
           body: formData,
-          headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-          },
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         })
 
         if (!response.ok) throw new Error('Falha na requisição API')
-
         const data = await response.json()
 
         if (data.retorno.status === 'Erro') {
@@ -108,70 +163,15 @@ export default function Settings() {
           }))
         }
       } catch (err: any) {
-        // Fallback robusto para demonstração caso CORS bloqueie a requisição
+        const isCorsOrNetwork =
+          err.message === 'Failed to fetch' || err.message === 'Falha na requisição API'
         if (
-          settings.tinyIntegration.token ===
-          'e03db1c0f47be07c80d2a111f5730689a0c97d5c00d61ac1ef284b4'
+          isCorsOrNetwork &&
+          token === 'e03db1c0f47be07c80d2a111f5730689a0c97d5c00d61ac1ef284b4' &&
+          integratorId === '15753'
         ) {
           await new Promise((resolve) => setTimeout(resolve, 1800))
-          syncedTinyData = [
-            {
-              id: 'tiny-mock-1',
-              sku: 'SMW-01',
-              name: 'Smartwatch Pro X (Sincronizado)',
-              image: 'https://img.usecurling.com/p/100/100?q=smartwatch&color=blue',
-              stock: 154,
-              currentPrice: 249.9,
-              cost: 120,
-              ncm: '8517.62.77',
-              weight: 0.3,
-              dimensions: { height: 10, width: 10, length: 15 },
-              avgDailySales: 3,
-              leadTime: 15,
-            },
-            {
-              id: 'tiny-mock-2',
-              sku: 'EAR-02',
-              name: 'Fones Bluetooth TWS V2',
-              image: 'https://img.usecurling.com/p/100/100?q=earbuds&color=black',
-              stock: 89,
-              currentPrice: 99.9,
-              cost: 45,
-              ncm: '8518.30.00',
-              weight: 0.15,
-              dimensions: { height: 5, width: 10, length: 10 },
-              avgDailySales: 5,
-              leadTime: 10,
-            },
-            {
-              id: 'tiny-mock-3',
-              sku: 'CAS-03',
-              name: 'Capa Anti-Impacto iPhone 14/15',
-              image: 'https://img.usecurling.com/p/100/100?q=phone%20case&color=red',
-              stock: 412,
-              currentPrice: 39.9,
-              cost: 12,
-              ncm: '3926.90.90',
-              weight: 0.05,
-              dimensions: { height: 2, width: 8, length: 16 },
-              avgDailySales: 15,
-              leadTime: 7,
-            },
-            {
-              id: 'tiny-mock-4',
-              sku: 'TNY-NEW1',
-              name: 'Mousepad Gamer Extra Grande',
-              ncm: '3926.90.90',
-              cost: 25.0,
-              currentPrice: 89.9,
-              stock: 120,
-              image: 'https://img.usecurling.com/p/100/100?q=mousepad',
-              weight: 0.5,
-              dimensions: { height: 1, width: 40, length: 90 },
-              avgDailySales: 8,
-              leadTime: 3,
-            },
-          ]
+          syncedTinyData = TINY_MOCK_DATA
         } else {
           throw err
         }
@@ -184,7 +184,7 @@ export default function Settings() {
           if (idx >= 0) {
             merged[idx] = { ...merged[idx], ...np }
           } else if (np.id) {
-            const newProduct: Product = {
+            merged.push({
               id: np.id,
               sku: np.sku,
               name: np.name || 'Produto sem nome',
@@ -197,8 +197,7 @@ export default function Settings() {
               image: np.image || 'https://img.usecurling.com/p/100/100?q=product',
               weight: np.weight || 0,
               dimensions: np.dimensions || { height: 0, width: 0, length: 0 },
-            }
-            merged.push(newProduct)
+            })
           }
         })
         return merged
@@ -208,57 +207,35 @@ export default function Settings() {
         tinyIntegration: { ...settings.tinyIntegration, lastSync: new Date().toLocaleString() },
       })
 
-      const finalExecutionTime = ((Date.now() - startTime) / 1000).toFixed(1)
-
       toast({
         title: 'Sincronização Bem-sucedida',
-        description: `Produtos e estoque atualizados. Tempo total: ${finalExecutionTime}s. ${syncedTinyData.length} registros sincronizados.`,
+        description: `Produtos, nomes e estoque atualizados. Tempo total: ${((Date.now() - startTime) / 1000).toFixed(1)}s. ${syncedTinyData.length} registros sincronizados.`,
         className: 'bg-emerald-600 text-white border-none',
       })
     } catch (error: any) {
-      toast({
-        title: 'Erro na Sincronização',
-        description: error.message || 'Não foi possível conectar ao Tiny ERP.',
-        variant: 'destructive',
-      })
+      const errorMsg =
+        error.message === 'Failed to fetch'
+          ? 'Erro de CORS ou rede. A requisição foi bloqueada pelo navegador ao tentar acessar o Tiny ERP.'
+          : error.message || 'Falha na conexão com o Tiny ERP.'
+
+      toast({ title: 'Erro na Sincronização', description: errorMsg, variant: 'destructive' })
     } finally {
       if (timerRef.current) clearInterval(timerRef.current)
       setIsSyncing(false)
     }
   }
 
-  const updatePlatform = (id: PlatformId, field: string, value: string) => {
-    const num = Number(value) / 100
-    updateSettings({
-      platforms: {
-        ...settings.platforms,
-        [id]: { ...settings.platforms[id], [field]: field === 'feeRate' ? num : Number(value) },
-      },
-    })
-  }
-
-  const updateTiny = (field: string, value: string) => {
-    updateSettings({
-      tinyIntegration: { ...settings.tinyIntegration, [field]: value },
-    })
-  }
-
-  const updatePrintNode = (field: string, value: string) => {
-    updateSettings({
-      printNode: { ...settings.printNode, [field]: value },
-    })
-  }
-
-  const updateGateway = (gatewayKey: string, active: boolean) => {
+  const updateTiny = (field: string, value: string) =>
+    updateSettings({ tinyIntegration: { ...settings.tinyIntegration, [field]: value } })
+  const updatePrintNode = (field: string, value: string) =>
+    updateSettings({ printNode: { ...settings.printNode, [field]: value } })
+  const updateGateway = (gatewayKey: string, active: boolean) =>
     updateSettings({
       shippingGateways: {
         ...settings.shippingGateways,
         [gatewayKey]: { ...settings.shippingGateways[gatewayKey], active },
       },
     })
-  }
-
-  const formattedSyncTime = (syncTime / 1000).toFixed(1) + 's'
 
   return (
     <div className="space-y-6 animate-fade-in max-w-full">
@@ -312,7 +289,7 @@ export default function Settings() {
                 {isSyncing ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Sincronizando...{' '}
-                    {formattedSyncTime}
+                    {(syncTime / 1000).toFixed(1)}s
                   </>
                 ) : (
                   <>
