@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react'
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react'
 import { AppSettings, Product } from '@/lib/types'
 
 const INITIAL_PRODUCTS: Product[] = [
@@ -138,8 +138,31 @@ interface StoreState {
 const StoreContext = createContext<StoreState | null>(null)
 
 export const DataStoreProvider = ({ children }: { children: ReactNode }) => {
-  const [products, setProducts] = useState<Product[]>(INITIAL_PRODUCTS)
-  const [settings, setSettings] = useState<AppSettings>(INITIAL_SETTINGS)
+  const [products, setProducts] = useState<Product[]>(() => {
+    try {
+      const stored = localStorage.getItem('otimizacao_products')
+      return stored ? JSON.parse(stored) : INITIAL_PRODUCTS
+    } catch {
+      return INITIAL_PRODUCTS
+    }
+  })
+
+  const [settings, setSettings] = useState<AppSettings>(() => {
+    try {
+      const stored = localStorage.getItem('otimizacao_settings')
+      return stored ? JSON.parse(stored) : INITIAL_SETTINGS
+    } catch {
+      return INITIAL_SETTINGS
+    }
+  })
+
+  useEffect(() => {
+    localStorage.setItem('otimizacao_products', JSON.stringify(products))
+  }, [products])
+
+  useEffect(() => {
+    localStorage.setItem('otimizacao_settings', JSON.stringify(settings))
+  }, [settings])
 
   const updateProduct = (id: string, data: Partial<Product>) => {
     setProducts((prev) => prev.map((p) => (p.id === id ? { ...p, ...data } : p)))

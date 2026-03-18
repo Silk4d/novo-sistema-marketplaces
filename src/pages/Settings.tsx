@@ -42,7 +42,7 @@ export default function Settings() {
   const handleSave = () => {
     toast({
       title: 'Configurações Salvas',
-      description: 'Todas as configurações foram atualizadas com sucesso.',
+      description: 'Todas as configurações foram atualizadas com sucesso no banco de dados local.',
     })
   }
 
@@ -61,50 +61,57 @@ export default function Settings() {
 
     const startTime = Date.now()
     timerRef.current = setInterval(() => {
-      setSyncTime((Date.now() - startTime) / 1000)
-    }, 100)
+      setSyncTime(Math.floor((Date.now() - startTime) / 1000))
+    }, 1000)
 
     try {
-      // Simulating Data Fetch from Tiny ERP
-      await new Promise((resolve) => setTimeout(resolve, 3400))
+      // Simulating Data Fetch from Tiny ERP with real-world delay
+      await new Promise((resolve) => setTimeout(resolve, 3800))
 
-      const newProducts: Product[] = [
+      const syncedTinyData: Array<Partial<Product> & { sku: string }> = [
         {
-          id: 'tiny-1',
-          sku: 'TNY-01',
-          name: 'Teclado Mecânico RGB',
-          ncm: '8471.60.52',
-          cost: 150.0,
-          currentPrice: 350.0,
-          stock: 25,
-          avgDailySales: 2,
-          leadTime: 5,
-          image: 'https://img.usecurling.com/p/100/100?q=keyboard',
-          weight: 1.2,
-          dimensions: { height: 5, width: 15, length: 45 },
+          sku: 'SMW-01',
+          name: 'Smartwatch Pro X (Sincronizado)',
+          image: 'https://img.usecurling.com/p/100/100?q=smartwatch&color=blue',
+          stock: 154,
         },
         {
-          id: 'tiny-2',
-          sku: 'TNY-02',
-          name: 'Mouse Gamer 10000DPI',
-          ncm: '8471.60.53',
-          cost: 80.0,
-          currentPrice: 199.9,
-          stock: 50,
-          avgDailySales: 5,
+          sku: 'EAR-02',
+          name: 'Fones Bluetooth TWS V2',
+          image: 'https://img.usecurling.com/p/100/100?q=earbuds&color=black',
+          stock: 89,
+        },
+        {
+          sku: 'CAS-03',
+          name: 'Capa Anti-Impacto iPhone 14/15',
+          image: 'https://img.usecurling.com/p/100/100?q=phone%20case&color=red',
+          stock: 412,
+        },
+        {
+          sku: 'TNY-NEW1',
+          id: 'tiny-new-1',
+          name: 'Mousepad Gamer Extra Grande',
+          ncm: '3926.90.90',
+          cost: 25.0,
+          currentPrice: 89.9,
+          stock: 120,
+          avgDailySales: 8,
           leadTime: 3,
-          image: 'https://img.usecurling.com/p/100/100?q=mouse',
-          weight: 0.3,
-          dimensions: { height: 4, width: 8, length: 12 },
+          image: 'https://img.usecurling.com/p/100/100?q=mousepad',
+          weight: 0.5,
+          dimensions: { height: 1, width: 40, length: 90 },
         },
       ]
 
       setProducts((prev) => {
         const merged = [...prev]
-        newProducts.forEach((np) => {
+        syncedTinyData.forEach((np) => {
           const idx = merged.findIndex((p) => p.sku === np.sku)
-          if (idx >= 0) merged[idx] = { ...merged[idx], ...np }
-          else merged.push(np)
+          if (idx >= 0) {
+            merged[idx] = { ...merged[idx], ...np }
+          } else if (np.id) {
+            merged.push(np as Product)
+          }
         })
         return merged
       })
@@ -113,10 +120,13 @@ export default function Settings() {
         tinyIntegration: { ...settings.tinyIntegration, lastSync: new Date().toLocaleString() },
       })
 
-      const finalTime = ((Date.now() - startTime) / 1000).toFixed(1)
+      const finalTimeStr = `${Math.floor(syncTime / 60)
+        .toString()
+        .padStart(2, '0')}:${(syncTime % 60).toString().padStart(2, '0')}s`
+
       toast({
         title: 'Sincronização Bem-sucedida',
-        description: `Conexão e sincronização concluídas em ${finalTime}s.`,
+        description: `Produtos e estoque atualizados com sucesso. Tempo total: ${finalTimeStr}. ${syncedTinyData.length} registros sincronizados.`,
         className: 'bg-emerald-600 text-white border-none',
       })
     } catch (error) {
@@ -161,6 +171,10 @@ export default function Settings() {
       },
     })
   }
+
+  const formattedSyncTime = `${Math.floor(syncTime / 60)
+    .toString()
+    .padStart(2, '0')}:${(syncTime % 60).toString().padStart(2, '0')}s`
 
   return (
     <div className="space-y-6 animate-fade-in max-w-full">
@@ -209,12 +223,12 @@ export default function Settings() {
                 onClick={handleTestConnection}
                 variant="secondary"
                 disabled={isSyncing}
-                className="min-w-[180px]"
+                className="min-w-[220px]"
               >
                 {isSyncing ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Sincronizando...{' '}
-                    {syncTime.toFixed(1)}s
+                    {formattedSyncTime}
                   </>
                 ) : (
                   <>
