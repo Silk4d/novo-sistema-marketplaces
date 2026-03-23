@@ -13,6 +13,8 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { useToast } from '@/hooks/use-toast'
+import { syncTinyProducts, type SyncSummary } from '@/services/tiny'
+import pb from '@/lib/pocketbase/client'
 import {
   Settings as SettingsIcon,
   Save,
@@ -22,73 +24,15 @@ import {
   Printer,
   Truck,
   Loader2,
+  RefreshCw,
 } from 'lucide-react'
-import { PlatformId, Product } from '@/lib/types'
-
-const TINY_MOCK_DATA = [
-  {
-    id: 'tiny-mock-1',
-    sku: 'SMW-01',
-    name: 'Smartwatch Pro X (Sincronizado)',
-    image: 'https://img.usecurling.com/p/100/100?q=smartwatch&color=blue',
-    stock: 154,
-    currentPrice: 249.9,
-    cost: 120,
-    ncm: '8517.62.77',
-    weight: 0.3,
-    dimensions: { height: 10, width: 10, length: 15 },
-    avgDailySales: 3,
-    leadTime: 15,
-  },
-  {
-    id: 'tiny-mock-2',
-    sku: 'EAR-02',
-    name: 'Fones Bluetooth TWS V2',
-    image: 'https://img.usecurling.com/p/100/100?q=earbuds&color=black',
-    stock: 89,
-    currentPrice: 99.9,
-    cost: 45,
-    ncm: '8518.30.00',
-    weight: 0.15,
-    dimensions: { height: 5, width: 10, length: 10 },
-    avgDailySales: 5,
-    leadTime: 10,
-  },
-  {
-    id: 'tiny-mock-3',
-    sku: 'CAS-03',
-    name: 'Capa Anti-Impacto iPhone 14/15',
-    image: 'https://img.usecurling.com/p/100/100?q=phone%20case&color=red',
-    stock: 412,
-    currentPrice: 39.9,
-    cost: 12,
-    ncm: '3926.90.90',
-    weight: 0.05,
-    dimensions: { height: 2, width: 8, length: 16 },
-    avgDailySales: 15,
-    leadTime: 7,
-  },
-  {
-    id: 'tiny-mock-4',
-    sku: 'TNY-NEW1',
-    name: 'Mousepad Gamer Extra Grande',
-    image: 'https://img.usecurling.com/p/100/100?q=mousepad',
-    stock: 120,
-    currentPrice: 89.9,
-    cost: 25.0,
-    ncm: '3926.90.90',
-    weight: 0.5,
-    dimensions: { height: 1, width: 40, length: 90 },
-    avgDailySales: 8,
-    leadTime: 3,
-  },
-]
 
 export default function Settings() {
   const { settings, updateSettings, setProducts } = useDataStore()
   const { toast } = useToast()
   const [isSyncing, setIsSyncing] = useState(false)
   const [syncTime, setSyncTime] = useState(0)
+  const [syncSummary, setSyncSummary] = useState<SyncSummary | null>(null)
   const timerRef = useRef<NodeJS.Timeout | null>(null)
 
   useEffect(
@@ -106,11 +50,14 @@ export default function Settings() {
   }
 
   const handleTestConnection = async () => {
-    const { token, integratorId } = settings.tinyIntegration
-    if (!token || !integratorId) {
+    const envToken = import.meta.env.VITE_TINY_TOKEN
+    const tokenToUse = envToken || settings.tinyIntegration.token
+
+    if (!tokenToUse) {
       toast({
         title: 'Erro na Conexão',
-        description: 'Preencha o Token e o Identificador primeiro.',
+        description:
+          'Token não configurado. Adicione no campo abaixo ou defina VITE_TINY_TOKEN no .env.',
         variant: 'destructive',
       })
       return
@@ -118,107 +65,49 @@ export default function Settings() {
 
     setIsSyncing(true)
     setSyncTime(0)
+    setSyncSummary(null)
     const startTime = Date.now()
     timerRef.current = setInterval(() => setSyncTime(Date.now() - startTime), 100)
 
     try {
-      const formData = new URLSearchParams()
-      formData.append('token', token)
-      formData.append('formato', 'json')
-      formData.append('situacao', 'A') // Target specific active SKUs
-      formData.append('idIntegracao', integratorId) // Explicitly send the integrator identifier
+      // 1. Trigger robust backend synchronization process
+      const summary = await syncTinyProducts(tokenToUse)
+      setSyncSummary(summary)
 
-      let syncedTinyData: Array<Partial<Product> & { sku: string }> = []
-
-      try {
-        const response = await fetch('https://api.tiny.com.br/api2/produtos.pesquisa.php', {
-          method: 'POST',
-          body: formData,
-          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        })
-
-        if (!response.ok) throw new Error('Falha na requisição API')
-        const data = await response.json()
-
-        if (data.retorno.status === 'Erro') {
-          throw new Error(data.retorno.erros?.[0]?.erro || 'Credenciais inválidas')
-        }
-
-        if (data.retorno.status === 'OK' && data.retorno.produtos) {
-          syncedTinyData = data.retorno.produtos.map((p: any) => ({
-            id: String(p.produto.id),
-            sku: p.produto.codigo,
-            name: p.produto.nome,
-            currentPrice: Number(p.produto.preco) || 0,
-            cost: Number(p.produto.preco_custo) || 0,
-            ncm: p.produto.ncm || '',
-            weight: Number(p.produto.peso_bruto) || 0,
-            dimensions: {
-              height: Number(p.produto.altura) || 0,
-              width: Number(p.produto.largura) || 0,
-              length: Number(p.produto.comprimento) || 0,
-            },
-            image: p.produto.anexos?.[0]?.anexo || 'https://img.usecurling.com/p/100/100?q=product',
-            stock: Number(p.produto.saldo) || 0,
-          }))
-        }
-      } catch (err: any) {
-        const isCorsOrNetwork =
-          err.message === 'Failed to fetch' || err.message === 'Falha na requisição API'
-        if (
-          isCorsOrNetwork &&
-          token === 'e03db1c0f47be07c80d2a111f5730689a0c97d5c00d61ac1ef284b4' &&
-          integratorId === '15753'
-        ) {
-          await new Promise((resolve) => setTimeout(resolve, 1800))
-          syncedTinyData = TINY_MOCK_DATA
-        } else {
-          throw err
-        }
-      }
-
-      setProducts((prev) => {
-        const merged = [...prev]
-        syncedTinyData.forEach((np) => {
-          const idx = merged.findIndex((p) => p.sku === np.sku)
-          if (idx >= 0) {
-            merged[idx] = { ...merged[idx], ...np }
-          } else if (np.id) {
-            merged.push({
-              id: np.id,
-              sku: np.sku,
-              name: np.name || 'Produto sem nome',
-              ncm: np.ncm || '',
-              cost: np.cost || 0,
-              currentPrice: np.currentPrice || 0,
-              stock: np.stock || 0,
-              avgDailySales: np.avgDailySales || 0,
-              leadTime: np.leadTime || 0,
-              image: np.image || 'https://img.usecurling.com/p/100/100?q=product',
-              weight: np.weight || 0,
-              dimensions: np.dimensions || { height: 0, width: 0, length: 0 },
-            })
-          }
-        })
-        return merged
-      })
+      // 2. Fetch the newly saved data from PocketBase to update frontend cache
+      const pbProducts = await pb.collection('products').getFullList()
+      setProducts(
+        pbProducts.map((p: any) => ({
+          id: p.id,
+          sku: p.sku,
+          name: p.name,
+          ncm: p.ncm || '',
+          cost: p.cost || 0,
+          currentPrice: p.price || 0,
+          stock: p.stock || 0,
+          avgDailySales: p.avgDailySales || 0,
+          leadTime: p.leadTime || 0,
+          image: p.image || 'https://img.usecurling.com/p/100/100?q=product',
+          weight: p.weight || 0,
+          dimensions: p.dimensions || { height: 0, width: 0, length: 0 },
+        })),
+      )
 
       updateSettings({
         tinyIntegration: { ...settings.tinyIntegration, lastSync: new Date().toLocaleString() },
       })
 
       toast({
-        title: 'Sincronização Bem-sucedida',
-        description: `Produtos, nomes e estoque atualizados. Tempo total: ${((Date.now() - startTime) / 1000).toFixed(1)}s. ${syncedTinyData.length} registros sincronizados.`,
+        title: 'Sincronização Concluída',
+        description: `Processo finalizado via proxy backend em ${((Date.now() - startTime) / 1000).toFixed(1)}s.`,
         className: 'bg-emerald-600 text-white border-none',
       })
     } catch (error: any) {
-      const errorMsg =
-        error.message === 'Failed to fetch'
-          ? 'Erro de CORS ou rede. A requisição foi bloqueada pelo navegador ao tentar acessar o Tiny ERP.'
-          : error.message || 'Falha na conexão com o Tiny ERP.'
-
-      toast({ title: 'Erro na Sincronização', description: errorMsg, variant: 'destructive' })
+      toast({
+        title: 'Erro na Sincronização',
+        description: error.message || 'Falha ao comunicar com o servidor proxy.',
+        variant: 'destructive',
+      })
     } finally {
       if (timerRef.current) clearInterval(timerRef.current)
       setIsSyncing(false)
@@ -247,60 +136,98 @@ export default function Settings() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <Card className="bg-slate-900 border-slate-800 md:col-span-2 lg:col-span-3">
-          <CardHeader>
+        <Card className="bg-slate-900 border-slate-800 md:col-span-2 lg:col-span-3 overflow-hidden">
+          <CardHeader className="border-b border-slate-800/50 pb-4 bg-slate-900/50">
             <CardTitle className="flex items-center gap-2">
-              <Database className="w-5 h-5 text-indigo-400" /> Integração Tiny ERP
+              <Database className="w-5 h-5 text-indigo-400" /> Integração Tiny ERP (Sync Engine)
             </CardTitle>
             <CardDescription>
-              Configure o acesso à API para sincronização bi-direcional.
+              Integração via Proxy Backend para evitar erros de CORS. Usa Upsert inteligente por
+              SKU.
             </CardDescription>
           </CardHeader>
-          <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>Identificador do Integrador</Label>
-              <Input
-                value={settings.tinyIntegration.integratorId}
-                onChange={(e) => updateTiny('integratorId', e.target.value)}
-                placeholder="Ex: 15753"
-                className="bg-slate-950 border-slate-700 max-w-xs"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Token API Tiny</Label>
-              <div className="relative max-w-xs">
-                <KeyRound className="absolute left-3 top-3 w-4 h-4 text-slate-500" />
-                <Input
-                  type="password"
-                  value={settings.tinyIntegration.token}
-                  onChange={(e) => updateTiny('token', e.target.value)}
-                  placeholder="••••••••••••••••"
-                  className="bg-slate-950 border-slate-700 pl-9"
-                />
+          <CardContent className="p-6 grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label>Token API Tiny</Label>
+                <div className="relative w-full max-w-sm">
+                  <KeyRound className="absolute left-3 top-3 w-4 h-4 text-slate-500" />
+                  <Input
+                    type="password"
+                    value={
+                      import.meta.env.VITE_TINY_TOKEN
+                        ? '********_ENV_VAR_********'
+                        : settings.tinyIntegration.token
+                    }
+                    disabled={!!import.meta.env.VITE_TINY_TOKEN}
+                    onChange={(e) => updateTiny('token', e.target.value)}
+                    placeholder="••••••••••••••••"
+                    className="bg-slate-950 border-slate-700 pl-9 w-full"
+                  />
+                </div>
+                {import.meta.env.VITE_TINY_TOKEN && (
+                  <p className="text-[10px] text-emerald-500/80">
+                    Utilizando token seguro via variável de ambiente.
+                  </p>
+                )}
+              </div>
+
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 pt-2">
+                <Button
+                  onClick={handleTestConnection}
+                  disabled={isSyncing}
+                  className="min-w-[240px] bg-indigo-600 hover:bg-indigo-700 text-white"
+                >
+                  {isSyncing ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Processando...{' '}
+                      {(syncTime / 1000).toFixed(1)}s
+                    </>
+                  ) : (
+                    <>
+                      <RefreshCw className="w-4 h-4 mr-2" /> Executar Sincronização
+                    </>
+                  )}
+                </Button>
+                {settings.tinyIntegration.lastSync && !isSyncing && (
+                  <span className="text-xs text-slate-500">
+                    Último Sync: {settings.tinyIntegration.lastSync}
+                  </span>
+                )}
               </div>
             </div>
-            <div className="sm:col-span-2 flex flex-col sm:flex-row items-start sm:items-center gap-4 mt-2">
-              <Button
-                onClick={handleTestConnection}
-                variant="secondary"
-                disabled={isSyncing}
-                className="min-w-[220px]"
-              >
-                {isSyncing ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Sincronizando...{' '}
-                    {(syncTime / 1000).toFixed(1)}s
-                  </>
-                ) : (
-                  <>
-                    <Wifi className="w-4 h-4 mr-2" /> Testar conexão
-                  </>
-                )}
-              </Button>
-              {settings.tinyIntegration.lastSync && !isSyncing && (
-                <span className="text-xs text-slate-500">
-                  Última Sincronização: {settings.tinyIntegration.lastSync}
-                </span>
+
+            {/* Sync Reporting Dashboard Requirement */}
+            <div className="bg-slate-950/50 border border-dashed border-slate-800 rounded-xl p-4 flex flex-col justify-center min-h-[140px]">
+              {syncSummary ? (
+                <div className="space-y-3 animate-fade-in">
+                  <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-wider text-center border-b border-slate-800 pb-2">
+                    Painel de Resultados (Sync Reporting)
+                  </h4>
+                  <div className="grid grid-cols-3 gap-2">
+                    <div className="text-center bg-slate-900 p-2 rounded border border-slate-800">
+                      <p className="text-[10px] text-slate-500 font-medium mb-1">LIDOS (API)</p>
+                      <p className="text-xl font-bold text-indigo-400">{syncSummary.read}</p>
+                    </div>
+                    <div className="text-center bg-emerald-500/10 p-2 rounded border border-emerald-500/20">
+                      <p className="text-[10px] text-emerald-500/80 font-medium mb-1">
+                        SALVOS/ATUALIZADOS
+                      </p>
+                      <p className="text-xl font-bold text-emerald-400">{syncSummary.saved}</p>
+                    </div>
+                    <div className="text-center bg-rose-500/10 p-2 rounded border border-rose-500/20">
+                      <p className="text-[10px] text-rose-500/80 font-medium mb-1">
+                        PULADOS (SEM SKU)
+                      </p>
+                      <p className="text-xl font-bold text-rose-400">{syncSummary.skipped}</p>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center text-slate-600 flex flex-col items-center gap-2">
+                  <Database className="w-8 h-8 opacity-20" />
+                  <p className="text-sm">Aguardando execução da sincronização...</p>
+                </div>
               )}
             </div>
           </CardContent>
