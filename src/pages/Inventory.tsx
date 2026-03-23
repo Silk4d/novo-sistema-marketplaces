@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import useDataStore from '@/stores/useDataStore'
+import useProductsStore from '@/stores/useProductsStore'
 import { calcDaysOfCover } from '@/lib/calculations'
 import { formatNumber, formatBRL, formatPercent, cn } from '@/lib/utils'
 import {
@@ -14,11 +15,30 @@ import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { PackageSearch, AlertTriangle, Layers, TrendingUp } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { PackageSearch, AlertTriangle, Layers, TrendingUp, Loader2, RefreshCw } from 'lucide-react'
 
 export default function Inventory() {
-  const { products, updateProduct, settings } = useDataStore()
+  const { products: localProducts, updateProduct, settings } = useDataStore()
+  const { products: pbProducts, status: syncStatus, sync, loadProducts } = useProductsStore()
   const [activeTab, setActiveTab] = useState('margins')
+
+  useEffect(() => {
+    loadProducts()
+  }, [loadProducts])
+
+  const products = localProducts.map((lp) => {
+    const pbMatch = pbProducts.find((p) => p.sku === lp.sku)
+    if (pbMatch) {
+      return {
+        ...lp,
+        name: pbMatch.name,
+        currentPrice: pbMatch.price || lp.currentPrice,
+        cost: pbMatch.cost || lp.cost,
+      }
+    }
+    return lp
+  })
 
   const globalStock = products.reduce((acc, p) => acc + p.stock, 0)
   const globalVelocity = products.reduce((acc, p) => acc + p.avgDailySales, 0)
@@ -28,14 +48,35 @@ export default function Inventory() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-2">
-        <h1 className="text-3xl font-display font-bold tracking-tight flex items-center gap-3">
-          <PackageSearch className="w-8 h-8 text-indigo-500" />
-          Dashboard de Produtos & ERP
-        </h1>
-        <p className="text-slate-400">
-          Dados sincronizados do Tiny ERP. Gestão de margem real e controle de ruptura.
-        </p>
+      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between w-full mb-2">
+        <div className="flex flex-col gap-2">
+          <h1 className="text-3xl font-display font-bold tracking-tight flex items-center gap-3">
+            <PackageSearch className="w-8 h-8 text-indigo-500" />
+            Dashboard de Produtos & ERP
+          </h1>
+          <p className="text-slate-400">
+            Dados sincronizados do Tiny ERP. Gestão de margem real e controle de ruptura.
+          </p>
+        </div>
+        <div className="flex flex-col items-end gap-2">
+          <div className="text-sm font-medium h-5">
+            {syncStatus === 'loading' && (
+              <span className="text-indigo-400 flex items-center gap-2">
+                <Loader2 className="w-4 h-4 animate-spin" /> Sincronizando com Tiny...
+              </span>
+            )}
+            {syncStatus.startsWith('OK') && <span className="text-emerald-400">{syncStatus}</span>}
+            {syncStatus.startsWith('Erro') && <span className="text-rose-400">{syncStatus}</span>}
+          </div>
+          <Button
+            onClick={sync}
+            disabled={syncStatus === 'loading'}
+            className="gap-2 bg-indigo-600 hover:bg-indigo-700 text-white"
+          >
+            <RefreshCw className={cn('w-4 h-4', syncStatus === 'loading' && 'animate-spin')} />
+            Sincronizar Tiny ERP
+          </Button>
+        </div>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
