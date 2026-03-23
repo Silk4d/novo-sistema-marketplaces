@@ -21,6 +21,7 @@ import {
   Target,
   Truck,
   ClipboardList,
+  Database,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -29,6 +30,7 @@ export function AppSidebar() {
 
   const navItems = [
     { name: 'Visão Geral', path: '/', icon: LayoutDashboard },
+    { name: 'Sincronização Tiny', path: '/products', icon: Database },
     { name: 'Precificação Dinâmica', path: '/pricing', icon: Tag },
     { name: 'Produtos e Estoque', path: '/inventory', icon: Package },
     { name: 'Sugestões de Kits', path: '/bundles', icon: PackagePlus },
