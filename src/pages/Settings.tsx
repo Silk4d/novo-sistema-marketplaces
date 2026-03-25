@@ -12,6 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { Badge } from '@/components/ui/badge'
 import { useToast } from '@/hooks/use-toast'
 import { syncTinyProducts, type SyncSummary } from '@/services/tiny'
 import pb from '@/lib/pocketbase/client'
@@ -26,6 +27,7 @@ import {
   Loader2,
   RefreshCw,
 } from 'lucide-react'
+import { __APP_VERSION__ } from '@/config/constants'
 
 export default function Settings() {
   const { settings, updateSettings, setProducts } = useDataStore()
@@ -129,9 +131,17 @@ export default function Settings() {
   return (
     <div className="space-y-6 animate-fade-in max-w-full">
       <div className="flex flex-col gap-2">
-        <h1 className="text-3xl font-display font-bold tracking-tight flex items-center gap-3">
-          <SettingsIcon className="w-8 h-8 text-indigo-500" /> Configurações Globais
-        </h1>
+        <div className="flex items-center gap-3">
+          <h1 className="text-3xl font-display font-bold tracking-tight flex items-center gap-3">
+            <SettingsIcon className="w-8 h-8 text-indigo-500" /> Configurações Globais
+          </h1>
+          <Badge
+            variant="outline"
+            className="bg-indigo-500/10 text-indigo-400 border-indigo-500/20 text-xs py-0.5 mt-1"
+          >
+            v{__APP_VERSION__}
+          </Badge>
+        </div>
         <p className="text-slate-400">Ajuste parâmetros financeiros e integrações de sistema.</p>
       </div>
 
