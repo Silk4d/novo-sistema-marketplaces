@@ -1,7 +1,10 @@
 import { useSyncExternalStore } from 'react'
-import pb from '@/lib/pocketbase/client'
+import PocketBase from 'pocketbase'
 import { fetchProducts } from '@/services/tinyService'
+import { getErrorMessage } from '@/lib/pocketbase/errors'
 
+// Lightweight implementation mimicking Zustand's create pattern
+// since zustand is not in the project dependencies.
 type StateCreator<T> = (
   set: (partial: Partial<T> | ((state: T) => Partial<T>)) => void,
   get: () => T,
@@ -46,11 +49,34 @@ export interface Store {
   products: Product[]
   status: string
   sync: () => Promise<void>
+  loadFromDb: () => Promise<void>
 }
+
+// The store must initialize a PocketBase client using the VITE_PB_URL environment variable
+const pbUrl = import.meta.env.VITE_PB_URL || 'http://127.0.0.1:8090'
+const pb = new PocketBase(pbUrl)
+pb.autoCancellation(false)
 
 export const useProductsStore = create<Store>((set) => ({
   products: [],
   status: 'idle',
+  loadFromDb: async () => {
+    try {
+      const records = await pb.collection('products').getFullList({ sort: '-updated' })
+      set({
+        products: records.map((r) => ({
+          sku: r.sku,
+          name: r.name,
+          price: r.price,
+          cost: r.cost,
+          gtin: r.gtin,
+          status: r.status,
+        })),
+      })
+    } catch (error) {
+      console.error('Failed to load products from DB:', error)
+    }
+  },
   sync: async () => {
     set({ status: 'syncing...' })
     try {
@@ -59,6 +85,7 @@ export const useProductsStore = create<Store>((set) => ({
 
       for (const tp of tinyProducts) {
         try {
+          // Attempt to update the record using the SKU as the identifier
           const existing = await pb.collection('products').getFirstListItem(`sku="${tp.sku}"`)
 
           await pb.collection('products').update(existing.id, {
@@ -70,6 +97,7 @@ export const useProductsStore = create<Store>((set) => ({
           })
         } catch (err: any) {
           if (err.status === 404) {
+            // If the update operation fails (indicating the product is new), create a new record
             await pb.collection('products').create({
               sku: tp.sku,
               name: tp.name,
@@ -88,9 +116,9 @@ export const useProductsStore = create<Store>((set) => ({
         products: tinyProducts,
         status: `✅ ${tinyProducts.length} sincronizados`,
       })
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Sync error:', error)
-      set({ status: `❌ Erro: ${error.message || 'Erro desconhecido'}` })
+      set({ status: `❌ Erro: ${getErrorMessage(error)}` })
     }
   },
 }))

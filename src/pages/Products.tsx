@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { useProductsStore } from '@/stores/productsStore'
 import { Button } from '@/components/ui/button'
 import {
@@ -12,7 +13,11 @@ import { formatBRL, cn } from '@/lib/utils'
 import { Loader2, RefreshCw } from 'lucide-react'
 
 export default function Products() {
-  const { products, status, sync } = useProductsStore()
+  const { products, status, sync, loadFromDb } = useProductsStore()
+
+  useEffect(() => {
+    loadFromDb()
+  }, []) // Empty dependency array is safe since loadFromDb is stable in our store
 
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6 animate-fade-in-up">
