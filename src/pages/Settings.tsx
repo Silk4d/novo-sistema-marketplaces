@@ -50,15 +50,15 @@ export default function Settings() {
             <div className="flex flex-col gap-2">
               <Button
                 onClick={handleSync}
-                disabled={status === 'loading'}
+                disabled={status === 'syncing...'}
                 className="w-full sm:w-auto"
               >
-                {status === 'loading' ? (
+                {status === 'syncing...' ? (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 ) : (
                   <RefreshCw className="mr-2 h-4 w-4" />
                 )}
-                {status === 'loading' ? 'Sincronizando...' : 'Sincronizar Agora'}
+                {status === 'syncing...' ? 'Sincronizando...' : 'Sincronizar Agora'}
               </Button>
               <p className="text-xs text-muted-foreground mt-2">
                 A sincronização pode levar alguns segundos dependendo do tamanho do seu catálogo no

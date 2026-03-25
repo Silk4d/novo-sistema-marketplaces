@@ -22,6 +22,10 @@ export const fetchProducts = async (token: string): Promise<TinyProduct[]> => {
       },
     })
 
+    if (!response.ok) {
+      throw new Error('Falha na resposta da API do Tiny')
+    }
+
     const data = await response.json()
 
     if (data.retorno.status === 'OK') {
@@ -32,12 +36,12 @@ export const fetchProducts = async (token: string): Promise<TinyProduct[]> => {
           // The service must filter out any products that do not have a codigo (SKU).
           .filter((p: any) => p.produto && p.produto.codigo && p.produto.codigo.trim() !== '')
           .map((p: any) => ({
-            sku: p.produto.codigo,
-            name: p.produto.nome,
-            price: parseFloat(p.produto.preco) || 0,
-            cost: parseFloat(p.produto.preco_custo) || 0,
-            gtin: p.produto.gtin || '',
-            status: p.produto.situacao || 'A',
+            sku: String(p.produto.codigo),
+            name: String(p.produto.nome),
+            price: Number(p.produto.preco) || 0,
+            cost: Number(p.produto.preco_custo) || 0,
+            gtin: p.produto.gtin ? String(p.produto.gtin) : '',
+            status: p.produto.situacao ? String(p.produto.situacao) : 'A',
           }))
       )
     }

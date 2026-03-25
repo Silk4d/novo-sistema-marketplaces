@@ -13,11 +13,11 @@ import { formatBRL } from '@/lib/utils'
 import { Package } from 'lucide-react'
 
 export default function Inventory() {
-  const { products, loadProducts } = useProductsStore()
+  const { products, loadFromDb } = useProductsStore()
 
   useEffect(() => {
-    loadProducts()
-  }, [loadProducts])
+    loadFromDb()
+  }, [loadFromDb])
 
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6 animate-fade-in-up">
@@ -66,7 +66,7 @@ export default function Inventory() {
                   </TableRow>
                 ) : (
                   products.map((item) => (
-                    <TableRow key={item.id}>
+                    <TableRow key={item.sku}>
                       <TableCell className="font-medium">{item.sku}</TableCell>
                       <TableCell>{item.name}</TableCell>
                       <TableCell className="text-right font-medium">

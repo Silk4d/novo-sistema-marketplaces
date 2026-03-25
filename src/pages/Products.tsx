@@ -17,7 +17,7 @@ export default function Products() {
 
   useEffect(() => {
     loadFromDb()
-  }, []) // Empty dependency array is safe since loadFromDb is stable in our store
+  }, [loadFromDb])
 
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6 animate-fade-in-up">
