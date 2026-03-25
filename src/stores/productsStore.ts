@@ -1,13 +1,13 @@
 import { useSyncExternalStore } from 'react'
 import pb from '@/lib/pocketbase/client'
-import { fetchProducts } from '@/services/tiny'
+import { fetchProducts } from '@/services/tinyService'
 
 type StateCreator<T> = (
   set: (partial: Partial<T> | ((state: T) => Partial<T>)) => void,
   get: () => T,
 ) => T
 
-// Zustand-like create function implemented internally to respect dependencies constraints
+// Gerenciador de estado minimalista baseado no padrão do Zustand
 function create<T>(createState: StateCreator<T>) {
   let state: T
   const listeners = new Set<() => void>()
@@ -51,12 +51,14 @@ export interface ProductsState {
   loadProducts: () => Promise<void>
 }
 
-const useProductsStore = create<ProductsState>((set, get) => ({
+export const useProductsStore = create<ProductsState>((set, get) => ({
   products: [],
   status: 'idle',
   loadProducts: async () => {
     try {
-      const records = await pb.collection('products').getFullList<ProductRecord>()
+      const records = await pb.collection('products').getFullList<ProductRecord>({
+        sort: '-updated',
+      })
       set({ products: records })
     } catch (error: any) {
       console.error('Failed to load products:', error)
@@ -71,9 +73,11 @@ const useProductsStore = create<ProductsState>((set, get) => ({
 
       for (const tp of tinyProducts) {
         try {
+          // Tenta atualizar se já existe (usando SKU como identificador)
           const existing = await pb
             .collection('products')
             .getFirstListItem<ProductRecord>(`sku="${tp.sku}"`)
+
           await pb.collection('products').update(existing.id, {
             name: tp.name,
             price: tp.price,
@@ -84,6 +88,7 @@ const useProductsStore = create<ProductsState>((set, get) => ({
           count++
         } catch (err: any) {
           if (err.status === 404) {
+            // Cria novo registro caso não seja encontrado
             await pb.collection('products').create({
               sku: tp.sku,
               name: tp.name,
@@ -106,5 +111,3 @@ const useProductsStore = create<ProductsState>((set, get) => ({
     }
   },
 }))
-
-export default useProductsStore
