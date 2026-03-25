@@ -14,7 +14,6 @@ export const fetchProducts = async (token: string): Promise<TinyProduct[]> => {
     formData.append('formato', 'json')
     formData.append('pesquisa', '')
 
-    // Conecta a API v2 do Tiny ERP usando o token fornecido
     const response = await fetch('https://api.tiny.com.br/api2/produtos.pesquisa.php', {
       method: 'POST',
       body: formData,
@@ -26,21 +25,28 @@ export const fetchProducts = async (token: string): Promise<TinyProduct[]> => {
     const data = await response.json()
 
     if (data.retorno.status === 'OK') {
-      return data.retorno.produtos.map((p: any) => ({
-        sku: p.produto.codigo,
-        name: p.produto.nome,
-        price: parseFloat(p.produto.preco),
-        cost: parseFloat(p.produto.preco_custo),
-        gtin: p.produto.gtin || '',
-        status: p.produto.situacao || 'A',
-      }))
+      const produtos = data.retorno.produtos || []
+
+      return (
+        produtos
+          // The service must filter out any products that do not have a codigo (SKU).
+          .filter((p: any) => p.produto && p.produto.codigo && p.produto.codigo.trim() !== '')
+          .map((p: any) => ({
+            sku: p.produto.codigo,
+            name: p.produto.nome,
+            price: parseFloat(p.produto.preco) || 0,
+            cost: parseFloat(p.produto.preco_custo) || 0,
+            gtin: p.produto.gtin || '',
+            status: p.produto.situacao || 'A',
+          }))
+      )
     }
 
     if (data.retorno.codigo_erro === '20') {
-      return []
+      return [] // No records found for the search
     }
 
-    throw new Error(data.retorno.erros[0]?.erro || 'Erro desconhecido ao acessar API do Tiny')
+    throw new Error(data.retorno.erros?.[0]?.erro || 'Erro desconhecido ao acessar API do Tiny')
   } catch (err) {
     console.error('Falha ao buscar produtos da API do Tiny, utilizando fallback:', err)
 

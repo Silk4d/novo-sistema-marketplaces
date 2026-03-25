@@ -9,7 +9,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { formatBRL } from '@/lib/utils'
+import { formatBRL, cn } from '@/lib/utils'
 import { Loader2, RefreshCw } from 'lucide-react'
 
 export default function Products() {
@@ -30,8 +30,17 @@ export default function Products() {
         </div>
 
         <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
-          <div className="text-sm font-medium px-4 py-2 bg-muted rounded-md text-muted-foreground border border-border">
-            Status: {status === 'idle' ? 'Aguardando sincronização' : status}
+          <div className="flex items-center text-sm font-medium px-4 py-2 bg-muted rounded-md border border-border">
+            <span className="text-muted-foreground mr-2">Status:</span>
+            <span
+              className={cn(
+                status === 'OK' && 'text-emerald-500',
+                status === 'Erro' && 'text-rose-500',
+                (status === 'idle' || status === 'loading') && 'text-foreground',
+              )}
+            >
+              {status}
+            </span>
           </div>
           <Button onClick={sync} disabled={status === 'loading'} className="min-w-[200px]">
             {status === 'loading' ? (

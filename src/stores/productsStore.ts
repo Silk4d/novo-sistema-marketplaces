@@ -46,7 +46,7 @@ export interface ProductRecord {
 
 export interface ProductsState {
   products: ProductRecord[]
-  status: string
+  status: 'idle' | 'loading' | 'OK' | 'Erro'
   sync: () => Promise<void>
   loadProducts: () => Promise<void>
 }
@@ -69,15 +69,15 @@ export const useProductsStore = create<ProductsState>((set, get) => ({
     try {
       const token = import.meta.env.VITE_TINY_TOKEN || ''
       const tinyProducts = await fetchProducts(token)
-      let count = 0
 
       for (const tp of tinyProducts) {
         try {
-          // Tenta atualizar se já existe (usando SKU como identificador)
+          // Check if product with same SKU exists
           const existing = await pb
             .collection('products')
             .getFirstListItem<ProductRecord>(`sku="${tp.sku}"`)
 
+          // Update existing product
           await pb.collection('products').update(existing.id, {
             name: tp.name,
             price: tp.price,
@@ -85,10 +85,9 @@ export const useProductsStore = create<ProductsState>((set, get) => ({
             gtin: tp.gtin,
             status: tp.status,
           })
-          count++
         } catch (err: any) {
           if (err.status === 404) {
-            // Cria novo registro caso não seja encontrado
+            // Create new record if it doesn't exist
             await pb.collection('products').create({
               sku: tp.sku,
               name: tp.name,
@@ -97,7 +96,6 @@ export const useProductsStore = create<ProductsState>((set, get) => ({
               gtin: tp.gtin,
               status: tp.status,
             })
-            count++
           } else {
             throw err
           }
@@ -105,9 +103,10 @@ export const useProductsStore = create<ProductsState>((set, get) => ({
       }
 
       await get().loadProducts()
-      set({ status: `OK: ${count} sincronizados` })
+      set({ status: 'OK' })
     } catch (error: any) {
-      set({ status: `Erro: ${error.message || 'Erro desconhecido'}` })
+      console.error('Sync error:', error)
+      set({ status: 'Erro' })
     }
   },
 }))
