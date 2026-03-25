@@ -7,7 +7,6 @@ type StateCreator<T> = (
   get: () => T,
 ) => T
 
-// Gerenciador de estado minimalista baseado no padrão do Zustand
 function create<T>(createState: StateCreator<T>) {
   let state: T
   const listeners = new Set<() => void>()
@@ -34,8 +33,7 @@ function create<T>(createState: StateCreator<T>) {
   }
 }
 
-export interface ProductRecord {
-  id: string
+export interface Product {
   sku: string
   name: string
   price: number
@@ -44,40 +42,25 @@ export interface ProductRecord {
   status: string
 }
 
-export interface ProductsState {
-  products: ProductRecord[]
-  status: 'idle' | 'loading' | 'OK' | 'Erro'
+export interface Store {
+  products: Product[]
+  status: string
   sync: () => Promise<void>
-  loadProducts: () => Promise<void>
 }
 
-export const useProductsStore = create<ProductsState>((set, get) => ({
+export const useProductsStore = create<Store>((set) => ({
   products: [],
   status: 'idle',
-  loadProducts: async () => {
-    try {
-      const records = await pb.collection('products').getFullList<ProductRecord>({
-        sort: '-updated',
-      })
-      set({ products: records })
-    } catch (error: any) {
-      console.error('Failed to load products:', error)
-    }
-  },
   sync: async () => {
-    set({ status: 'loading' })
+    set({ status: 'syncing...' })
     try {
       const token = import.meta.env.VITE_TINY_TOKEN || ''
       const tinyProducts = await fetchProducts(token)
 
       for (const tp of tinyProducts) {
         try {
-          // Check if product with same SKU exists
-          const existing = await pb
-            .collection('products')
-            .getFirstListItem<ProductRecord>(`sku="${tp.sku}"`)
+          const existing = await pb.collection('products').getFirstListItem(`sku="${tp.sku}"`)
 
-          // Update existing product
           await pb.collection('products').update(existing.id, {
             name: tp.name,
             price: tp.price,
@@ -87,7 +70,6 @@ export const useProductsStore = create<ProductsState>((set, get) => ({
           })
         } catch (err: any) {
           if (err.status === 404) {
-            // Create new record if it doesn't exist
             await pb.collection('products').create({
               sku: tp.sku,
               name: tp.name,
@@ -102,11 +84,13 @@ export const useProductsStore = create<ProductsState>((set, get) => ({
         }
       }
 
-      await get().loadProducts()
-      set({ status: 'OK' })
+      set({
+        products: tinyProducts,
+        status: `✅ ${tinyProducts.length} sincronizados`,
+      })
     } catch (error: any) {
       console.error('Sync error:', error)
-      set({ status: 'Erro' })
+      set({ status: `❌ Erro: ${error.message || 'Erro desconhecido'}` })
     }
   },
 }))

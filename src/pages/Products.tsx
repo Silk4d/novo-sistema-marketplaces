@@ -1,4 +1,3 @@
-import { useEffect } from 'react'
 import { useProductsStore } from '@/stores/productsStore'
 import { Button } from '@/components/ui/button'
 import {
@@ -13,11 +12,7 @@ import { formatBRL, cn } from '@/lib/utils'
 import { Loader2, RefreshCw } from 'lucide-react'
 
 export default function Products() {
-  const { products, status, sync, loadProducts } = useProductsStore()
-
-  useEffect(() => {
-    loadProducts()
-  }, [loadProducts])
+  const { products, status, sync } = useProductsStore()
 
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6 animate-fade-in-up">
@@ -34,16 +29,16 @@ export default function Products() {
             <span className="text-muted-foreground mr-2">Status:</span>
             <span
               className={cn(
-                status === 'OK' && 'text-emerald-500',
-                status === 'Erro' && 'text-rose-500',
-                (status === 'idle' || status === 'loading') && 'text-foreground',
+                status.startsWith('✅') && 'text-emerald-500',
+                status.startsWith('❌') && 'text-rose-500',
+                (status === 'idle' || status === 'syncing...') && 'text-foreground',
               )}
             >
               {status}
             </span>
           </div>
-          <Button onClick={sync} disabled={status === 'loading'} className="min-w-[200px]">
-            {status === 'loading' ? (
+          <Button onClick={sync} disabled={status === 'syncing...'} className="min-w-[200px]">
+            {status === 'syncing...' ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
             ) : (
               <RefreshCw className="mr-2 h-4 w-4" />
@@ -73,7 +68,7 @@ export default function Products() {
               </TableRow>
             ) : (
               products.map((p) => (
-                <TableRow key={p.id} className="transition-colors hover:bg-muted/50">
+                <TableRow key={p.sku} className="transition-colors hover:bg-muted/50">
                   <TableCell className="font-medium text-foreground">{p.sku}</TableCell>
                   <TableCell>{p.name}</TableCell>
                   <TableCell className="text-right font-medium text-foreground">
